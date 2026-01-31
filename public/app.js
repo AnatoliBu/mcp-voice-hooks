@@ -30,6 +30,7 @@ class MessengerClient {
         this.rateWarning = document.getElementById('rateWarning');
         this.systemVoiceInfo = document.getElementById('systemVoiceInfo');
         this.sttLanguageSelect = document.getElementById('sttLanguageSelect');
+        this.pauseMicCheckbox = document.getElementById('pauseMicDuringTTS');
 
         // State
         this.sendMode = 'automatic'; // 'automatic' or 'trigger'
@@ -45,6 +46,8 @@ class MessengerClient {
         this.selectedVoice = 'system';
         this.speechRate = 1.0;
         this.speechPitch = 1.0;
+        this.pauseMicDuringTTS = true; // Pause mic during speech to avoid echo
+        this.isPausedForTTS = false; // Flag to prevent auto-restart during TTS pause
 
         // Initialize
         this.initializeSpeechRecognition();
@@ -139,6 +142,14 @@ class MessengerClient {
     }
 
     async speakText(text) {
+        // Pause recognition to avoid echo (mic picking up TTS)
+        const wasListening = this.isListening && this.pauseMicDuringTTS;
+        if (wasListening && this.recognition) {
+            this.isPausedForTTS = true; // Prevent auto-restart in onend
+            this.recognition.stop();
+            this.debugLog('Paused recognition during TTS');
+        }
+
         // Check if we should use system voice
         if (this.selectedVoice === 'system') {
             // Use Mac system voice via server
@@ -158,6 +169,17 @@ class MessengerClient {
                 }
             } catch (error) {
                 console.error('Failed to call speak-system API:', error);
+            }
+
+            // Resume recognition after system voice finishes
+            if (wasListening && this.recognition) {
+                try {
+                    this.isPausedForTTS = false;
+                    this.recognition.start();
+                    this.debugLog('Resumed recognition after system TTS');
+                } catch (e) {
+                    console.error('Failed to resume recognition:', e);
+                }
             }
         } else {
             // Use browser voice
@@ -191,10 +213,29 @@ class MessengerClient {
 
             utterance.onend = () => {
                 this.debugLog('Finished speaking');
+                // Resume recognition after browser TTS finishes
+                if (wasListening && this.recognition) {
+                    try {
+                        this.isPausedForTTS = false;
+                        this.recognition.start();
+                        this.debugLog('Resumed recognition after browser TTS');
+                    } catch (e) {
+                        console.error('Failed to resume recognition:', e);
+                    }
+                }
             };
 
             utterance.onerror = (event) => {
                 console.error('Speech synthesis error:', event);
+                // Resume recognition even on error
+                if (wasListening && this.recognition) {
+                    try {
+                        this.isPausedForTTS = false;
+                        this.recognition.start();
+                    } catch (e) {
+                        console.error('Failed to resume recognition:', e);
+                    }
+                }
             };
 
             // Speak the text
@@ -236,6 +277,37 @@ class MessengerClient {
             this.speechRate = parseFloat(savedRate);
             if (this.speechRateSlider) this.speechRateSlider.value = this.speechRate.toString();
             if (this.speechRateInput) this.speechRateInput.value = this.speechRate.toFixed(1);
+        }
+
+        // Load pause mic during TTS preference
+        const savedPauseMic = localStorage.getItem('pauseMicDuringTTS');
+        if (savedPauseMic !== null) {
+            this.pauseMicDuringTTS = savedPauseMic === 'true';
+            if (this.pauseMicCheckbox) this.pauseMicCheckbox.checked = this.pauseMicDuringTTS;
+        }
+
+        // Load send mode preference
+        const savedSendMode = localStorage.getItem('sendMode');
+        if (savedSendMode) {
+            this.sendMode = savedSendMode;
+            // Update radio button
+            this.sendModeRadios.forEach(radio => {
+                if (radio.value === this.sendMode) {
+                    radio.checked = true;
+                }
+            });
+            // Show/hide trigger word input
+            this.triggerWordInputContainer.style.display =
+                this.sendMode === 'trigger' ? 'flex' : 'none';
+        }
+
+        // Load trigger word preference
+        const savedTriggerWord = localStorage.getItem('triggerWord');
+        if (savedTriggerWord) {
+            this.triggerWord = savedTriggerWord;
+            if (this.triggerWordInput) {
+                this.triggerWordInput.value = savedTriggerWord;
+            }
         }
     }
 
@@ -354,7 +426,14 @@ class MessengerClient {
     setupEventListeners() {
         // Text input events
         this.messageInput.addEventListener('keydown', (e) => this.handleTextInputKeydown(e));
-        this.messageInput.addEventListener('input', () => this.autoGrowTextarea());
+        this.messageInput.addEventListener('input', () => {
+            this.autoGrowTextarea();
+            // Sync accumulatedText when user manually edits the input
+            // (not during interim speech recognition updates)
+            if (!this.isInterimText) {
+                this.accumulatedText = this.messageInput.value;
+            }
+        });
 
         // Microphone button
         this.micBtn.addEventListener('click', () => this.toggleVoiceDictation());
@@ -365,12 +444,14 @@ class MessengerClient {
                 this.sendMode = e.target.value;
                 this.triggerWordInputContainer.style.display =
                     this.sendMode === 'trigger' ? 'flex' : 'none';
+                localStorage.setItem('sendMode', this.sendMode);
             });
         });
 
         // Trigger word input
         this.triggerWordInput.addEventListener('input', (e) => {
             this.triggerWord = e.target.value.trim().toLowerCase();
+            localStorage.setItem('triggerWord', this.triggerWord);
         });
 
         // Settings toggle
@@ -453,6 +534,14 @@ class MessengerClient {
         if (this.testTTSBtn) {
             this.testTTSBtn.addEventListener('click', () => {
                 this.speakText('This is Voice Mode for Claude Code. How can I help you today?');
+            });
+        }
+
+        // Pause mic during TTS checkbox
+        if (this.pauseMicCheckbox) {
+            this.pauseMicCheckbox.addEventListener('change', (e) => {
+                this.pauseMicDuringTTS = e.target.checked;
+                localStorage.setItem('pauseMicDuringTTS', this.pauseMicDuringTTS.toString());
             });
         }
     }
@@ -794,7 +883,8 @@ class MessengerClient {
         };
 
         this.recognition.onend = () => {
-            if (this.isListening) {
+            // Don't auto-restart if paused for TTS
+            if (this.isListening && !this.isPausedForTTS) {
                 try {
                     this.recognition.start();
                 } catch (e) {

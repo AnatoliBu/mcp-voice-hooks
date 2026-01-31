@@ -131,7 +131,8 @@ class VoiceHooksClient {
 
         // Handle end
         this.recognition.onend = () => {
-            if (this.isListening) {
+            // Don't auto-restart if paused for TTS
+            if (this.isListening && !this.isPausedForTTS) {
                 // Restart recognition to continue listening
                 try {
                     this.recognition.start();
@@ -208,6 +209,14 @@ class VoiceHooksClient {
         this.testTTSBtn.addEventListener('click', () => {
             this.speakText('This is Voice Mode for Claude Code. How can I help you today?');
         });
+
+        // Pause mic during TTS checkbox
+        if (this.pauseMicCheckbox) {
+            this.pauseMicCheckbox.addEventListener('change', (e) => {
+                this.pauseMicDuringTTS = e.target.checked;
+                localStorage.setItem('pauseMicDuringTTS', this.pauseMicDuringTTS.toString());
+            });
+        }
 
         // Voice toggle listeners
         this.voiceResponsesToggle.addEventListener('change', (e) => {
@@ -454,6 +463,9 @@ class VoiceHooksClient {
         this.speechRate = 1.0;
         this.speechPitch = 1.0;
         this.selectedVoice = 'system';
+        this.pauseMicDuringTTS = true; // Pause mic during speech to avoid echo
+        this.isPausedForTTS = false; // Flag to prevent auto-restart during TTS pause
+        this.pauseMicCheckbox = document.getElementById('pauseMicDuringTTS');
     }
 
     initializeTTSEvents() {
@@ -647,6 +659,14 @@ class VoiceHooksClient {
     }
 
     async speakText(text) {
+        // Pause recognition to avoid echo (mic picking up TTS)
+        const wasListening = this.isListening && this.pauseMicDuringTTS;
+        if (wasListening && this.recognition) {
+            this.isPausedForTTS = true; // Prevent auto-restart in onend
+            this.recognition.stop();
+            this.debugLog('Paused recognition during TTS');
+        }
+
         // Check if we should use system voice
         if (this.selectedVoice === 'system') {
             // Use Mac system voice via server
@@ -668,6 +688,17 @@ class VoiceHooksClient {
                 }
             } catch (error) {
                 console.error('Failed to call speak-system API:', error);
+            }
+
+            // Resume recognition after system voice finishes
+            if (wasListening && this.recognition) {
+                try {
+                    this.isPausedForTTS = false;
+                    this.recognition.start();
+                    this.debugLog('Resumed recognition after system TTS');
+                } catch (e) {
+                    console.error('Failed to resume recognition:', e);
+                }
             }
         } else {
             // Use browser voice
@@ -701,10 +732,29 @@ class VoiceHooksClient {
 
             utterance.onend = () => {
                 this.debugLog('Finished speaking');
+                // Resume recognition after browser TTS finishes
+                if (wasListening && this.recognition) {
+                    try {
+                        this.isPausedForTTS = false;
+                        this.recognition.start();
+                        this.debugLog('Resumed recognition after browser TTS');
+                    } catch (e) {
+                        console.error('Failed to resume recognition:', e);
+                    }
+                }
             };
 
             utterance.onerror = (event) => {
                 console.error('Speech synthesis error:', event);
+                // Resume recognition even on error
+                if (wasListening && this.recognition) {
+                    try {
+                        this.isPausedForTTS = false;
+                        this.recognition.start();
+                    } catch (e) {
+                        console.error('Failed to resume recognition:', e);
+                    }
+                }
             };
 
             // Speak the text
@@ -747,6 +797,13 @@ class VoiceHooksClient {
             this.speechRate = parseFloat(storedRate);
             this.speechRateSlider.value = storedRate;
             this.speechRateInput.value = this.speechRate.toFixed(1);
+        }
+
+        // Load pause mic during TTS preference
+        const savedPauseMic = localStorage.getItem('pauseMicDuringTTS');
+        if (savedPauseMic !== null) {
+            this.pauseMicDuringTTS = savedPauseMic === 'true';
+            if (this.pauseMicCheckbox) this.pauseMicCheckbox.checked = this.pauseMicDuringTTS;
         }
 
         // Load selected voice (will be applied after voices load)
