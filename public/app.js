@@ -29,6 +29,7 @@ class MessengerClient {
         this.testTTSBtn = document.getElementById('testTTSBtn');
         this.rateWarning = document.getElementById('rateWarning');
         this.systemVoiceInfo = document.getElementById('systemVoiceInfo');
+        this.sttLanguageSelect = document.getElementById('sttLanguageSelect');
 
         // State
         this.sendMode = 'automatic'; // 'automatic' or 'trigger'
@@ -37,6 +38,7 @@ class MessengerClient {
         this.isInterimText = false;
         this.accumulatedText = ''; // For trigger word mode
         this.debug = localStorage.getItem('voiceHooksDebug') === 'true';
+        this.sttLanguage = 'en-US'; // Speech recognition language
 
         // TTS state
         this.voices = [];
@@ -201,6 +203,18 @@ class MessengerClient {
     }
 
     loadPreferences() {
+        // Load STT language preference
+        const savedSttLanguage = localStorage.getItem('sttLanguage');
+        if (savedSttLanguage) {
+            this.sttLanguage = savedSttLanguage;
+            if (this.sttLanguageSelect) {
+                this.sttLanguageSelect.value = savedSttLanguage;
+            }
+            if (this.recognition) {
+                this.recognition.lang = this.sttLanguage;
+            }
+        }
+
         // Load voice responses preference from localStorage
         const savedVoiceResponses = localStorage.getItem('voiceResponsesEnabled');
         if (savedVoiceResponses !== null) {
@@ -386,10 +400,29 @@ class MessengerClient {
             this.updateVoiceWarnings();
         });
 
-        // Language filter
+        // Language filter for TTS voices
         if (this.languageSelect) {
             this.languageSelect.addEventListener('change', () => {
                 this.populateVoiceList();
+            });
+        }
+
+        // STT language selection
+        if (this.sttLanguageSelect) {
+            this.sttLanguageSelect.addEventListener('change', (e) => {
+                this.sttLanguage = e.target.value;
+                localStorage.setItem('sttLanguage', this.sttLanguage);
+
+                // Update recognition language
+                if (this.recognition) {
+                    this.recognition.lang = this.sttLanguage;
+
+                    // If currently listening, restart with new language
+                    if (this.isListening) {
+                        this.recognition.stop();
+                        // Will auto-restart via onend handler
+                    }
+                }
             });
         }
 
@@ -686,7 +719,7 @@ class MessengerClient {
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
         this.recognition.interimResults = true;
-        this.recognition.lang = 'en-US';
+        this.recognition.lang = this.sttLanguage;
 
         this.recognition.onresult = (event) => {
             let interimTranscript = '';

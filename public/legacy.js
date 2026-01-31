@@ -31,6 +31,8 @@ class VoiceHooksClient {
         // Speech recognition
         this.recognition = null;
         this.isListening = false;
+        this.sttLanguage = 'en-US'; // Speech recognition language
+        this.sttLanguageSelect = document.getElementById('sttLanguageSelect');
         this.initializeSpeechRecognition();
 
         // Speech synthesis
@@ -76,6 +78,7 @@ class VoiceHooksClient {
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
         this.recognition.interimResults = true;
+        this.recognition.lang = this.sttLanguage;
 
         // Handle results
         this.recognition.onresult = (event) => {
@@ -145,13 +148,32 @@ class VoiceHooksClient {
         this.clearAllBtn.addEventListener('click', () => this.clearAllUtterances());
         this.listenBtn.addEventListener('click', () => this.toggleListening());
 
-        // Language filter
+        // Language filter for TTS voices
         if (this.languageSelect) {
             this.languageSelect.addEventListener('change', () => {
                 // Save language preference
                 localStorage.setItem('selectedLanguage', this.languageSelect.value);
                 // Repopulate voice list with filtered voices
                 this.populateVoiceList();
+            });
+        }
+
+        // STT language selection
+        if (this.sttLanguageSelect) {
+            this.sttLanguageSelect.addEventListener('change', (e) => {
+                this.sttLanguage = e.target.value;
+                localStorage.setItem('sttLanguage', this.sttLanguage);
+
+                // Update recognition language
+                if (this.recognition) {
+                    this.recognition.lang = this.sttLanguage;
+
+                    // If currently listening, restart with new language
+                    if (this.isListening) {
+                        this.recognition.stop();
+                        // Will auto-restart via onend handler
+                    }
+                }
             });
         }
 
@@ -691,6 +713,18 @@ class VoiceHooksClient {
     }
 
     loadPreferences() {
+        // Load STT language preference
+        const savedSttLanguage = localStorage.getItem('sttLanguage');
+        if (savedSttLanguage) {
+            this.sttLanguage = savedSttLanguage;
+            if (this.sttLanguageSelect) {
+                this.sttLanguageSelect.value = savedSttLanguage;
+            }
+            if (this.recognition) {
+                this.recognition.lang = this.sttLanguage;
+            }
+        }
+
         // Simple localStorage with defaults to true
         const storedVoiceResponses = localStorage.getItem('voiceResponsesEnabled');
 
