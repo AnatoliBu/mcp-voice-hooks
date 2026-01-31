@@ -27,7 +27,9 @@ async function main() {
       await configureClaudeCodeSettings();
 
       console.log('\n✅ Installation complete!');
-      console.log('📝 To add the server to Claude Code, run: `claude mcp add voice-hooks npx mcp-voice-hooks@latest`');
+      console.log('📝 To add the MCP server to Claude Code, run one of:');
+      console.log('   Local:  claude mcp add voice-hooks node bin/cli.js');
+      console.log('   NPM:    claude mcp add voice-hooks npx mcp-voice-hooks@latest');
     } else if (command === 'uninstall') {
       console.log('🗑️  Uninstalling MCP Voice Hooks...');
       await uninstall();

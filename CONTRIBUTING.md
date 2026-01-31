@@ -4,20 +4,35 @@
 
 1. Clone and install:
    ```bash
-   git clone https://github.com/johnmatthewtennant/mcp-voice-hooks.git
+   git clone <repository-url>
    cd mcp-voice-hooks
    npm install
-   npm link
-   npx mcp-voice-hooks install-hooks
+   npm run build
    ```
 
-2. Start developing:
+2. Install hooks and add MCP server to Claude:
+   ```bash
+   node bin/cli.js install-hooks
+   claude mcp add voice-hooks node bin/cli.js
+   ```
+
+3. Start developing:
    ```bash
    npm run build  # After changing TypeScript files
    claude         # Restart to test changes
    ```
 
 **Important**: Claude runs compiled JavaScript from `dist/`, not TypeScript source. Run `npm run build` after changing `.ts` files. Browser files (`public/*`) just need Claude restart.
+
+## Alternative: Using npm link
+
+If you prefer using `npx mcp-voice-hooks` locally:
+
+```bash
+npm link
+npx mcp-voice-hooks install-hooks
+claude mcp add voice-hooks npx mcp-voice-hooks
+```
 
 ## Debug Mode
 
