@@ -1,9 +1,11 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import { WindowManager } from './window-manager';
+import { MCPIntegration } from './mcp-integration';
 
 let mainWindow: BrowserWindow | null = null;
 let windowManager: WindowManager | null = null;
+let mcpIntegration: MCPIntegration | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -25,6 +27,11 @@ function createWindow() {
   // Инициализация Window Manager
   windowManager = new WindowManager(mainWindow);
 
+  // Инициализация MCP Integration
+  // Получаем порт из переменной окружения или используем значение по умолчанию
+  const mcpPort = process.env.MCP_VOICE_HOOKS_PORT || '5111';
+  mcpIntegration = new MCPIntegration(mainWindow, `http://localhost:${mcpPort}`);
+
   // В разработке загружаем Vite dev server
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
@@ -34,17 +41,28 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
 
-  // Запуск cursor polling после загрузки окна
+  // Запуск cursor polling и MCP integration после загрузки окна
   mainWindow.webContents.on('did-finish-load', () => {
     windowManager?.startCursorPolling();
+    mcpIntegration?.start();
   });
 
   mainWindow.on('closed', () => {
+    mcpIntegration?.stop();
+    mcpIntegration = null;
     windowManager?.destroy();
     windowManager = null;
     mainWindow = null;
   });
 }
+
+// IPC Handler для voice API
+ipcMain.handle('voice:get-state', async () => {
+  return mcpIntegration?.getCurrentState() || {
+    state: 'idle',
+    timestamp: Date.now()
+  };
+});
 
 app.whenReady().then(() => {
   createWindow();

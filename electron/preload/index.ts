@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronAPI, WindowAPI, InteractiveRegion, WindowState } from './types';
+import type { ElectronAPI, WindowAPI, VoiceAPI, InteractiveRegion, WindowState, VoiceState } from './types';
 
 // Window API для управления окном из renderer
 const windowAPI: WindowAPI = {
@@ -28,11 +28,28 @@ const windowAPI: WindowAPI = {
     ipcRenderer.invoke('window:update-interactive-regions', regions)
 };
 
+// Voice API для управления голосовым вводом
+const voiceAPI: VoiceAPI = {
+  getState: (): Promise<VoiceState> =>
+    ipcRenderer.invoke('voice:get-state'),
+
+  onStateChanged: (callback: (state: VoiceState) => void) => {
+    const listener = (_event: any, state: VoiceState) => callback(state);
+    ipcRenderer.on('voice:state-changed', listener);
+
+    // Возвращаем функцию для отписки
+    return () => {
+      ipcRenderer.removeListener('voice:state-changed', listener);
+    };
+  }
+};
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 const api: ElectronAPI = {
   platform: process.platform,
-  window: windowAPI
+  window: windowAPI,
+  voice: voiceAPI
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);
