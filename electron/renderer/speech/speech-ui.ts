@@ -67,12 +67,12 @@ export class SpeechUI {
   }
 
   updateMode(mode: SendMode): void {
-    // Показываем/скрываем trigger word settings
+    // Показываем/скрываем trigger word settings (используем is-hidden для сохранения layout)
     if (this.triggerWordSettings) {
       if (mode === SendMode.TRIGGER_WORD) {
-        this.triggerWordSettings.classList.remove('hidden');
+        this.triggerWordSettings.classList.remove('is-hidden');
       } else {
-        this.triggerWordSettings.classList.add('hidden');
+        this.triggerWordSettings.classList.add('is-hidden');
       }
     }
   }

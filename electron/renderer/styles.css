@@ -30,6 +30,8 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   color: white;
   min-width: 250px;
+  min-height: 240px;
+  max-height: 240px;
   overflow: hidden;
   transition: box-shadow 0.2s ease;
 }
@@ -462,6 +464,15 @@ body {
   padding: 12px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
+  /* Use visibility instead of display:none to prevent layout shift */
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.trigger-word-settings.is-hidden {
+  visibility: hidden;
+  opacity: 0;
 }
 
 .trigger-word-settings label {
@@ -528,6 +539,19 @@ body {
 /* Hidden utility */
 .hidden {
   display: none !important;
+}
+
+/* Unified visibility classes - use for elements that need to preserve layout */
+.is-hidden {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.is-visible {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 /* Permission Dialog */

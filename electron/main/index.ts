@@ -10,7 +10,7 @@ let mcpIntegration: MCPIntegration | null = null;
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 400,
-    height: 200,
+    height: 260,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
