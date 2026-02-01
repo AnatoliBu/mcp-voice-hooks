@@ -3,6 +3,12 @@ dist/
 dist-electron/
 release/
 
+# Generated icons (keep source SVG only)
+build/icons/icon.icns
+build/icons/icon.ico
+build/icons/icon.png
+build/icons/icon.iconset/
+
 # Node modules
 node_modules/
 

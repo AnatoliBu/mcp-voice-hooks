@@ -178,3 +178,29 @@ Simply add the following to your project's `.claude/settings.local.json` and res
 ```
 
 set `enabled` to `false` if you want to temporarily disable the plugin.
+
+## Development & Building
+
+### Building from Source
+
+See [docs/BUILDING.md](docs/BUILDING.md) for comprehensive build instructions.
+
+Quick start:
+```bash
+git clone https://github.com/johnmatthewtennant/mcp-voice-hooks.git
+cd mcp-voice-hooks
+npm install
+npm run build:icons    # Requires ImageMagick
+npm run electron:build # Build for current platform
+```
+
+### Documentation
+
+- **Building**: [docs/BUILDING.md](docs/BUILDING.md) - Build instructions
+- **Code Signing**: [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md) - Code signing setup
+- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md) - Development workflow
+- **Stories**: [docs/stories/](docs/stories/) - Implementation details
+
+## License
+
+UNLICENSED
