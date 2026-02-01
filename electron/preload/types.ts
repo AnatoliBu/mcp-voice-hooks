@@ -6,6 +6,17 @@ export interface WindowState {
   alwaysOnTop: boolean;
 }
 
+export interface VoiceState {
+  state: 'idle' | 'listening' | 'recording' | 'processing' | 'error';
+  timestamp: number;
+  metadata?: {
+    errorMessage?: string;
+    recordingDuration?: number;
+    volume?: number;
+    [key: string]: any;
+  };
+}
+
 export interface InteractiveRegion {
   x: number;
   y: number;
@@ -28,9 +39,18 @@ export interface WindowAPI {
   updateInteractiveRegions(regions: InteractiveRegion[]): Promise<void>;
 }
 
+export interface VoiceAPI {
+  // Получить текущее состояние голосового ввода
+  getState(): Promise<VoiceState>;
+
+  // Подписаться на изменения состояния
+  onStateChanged(callback: (state: VoiceState) => void): () => void;
+}
+
 export interface ElectronAPI {
   platform: NodeJS.Platform;
   window: WindowAPI;
+  voice: VoiceAPI;
 }
 
 declare global {

@@ -1,6 +1,14 @@
 // Entry point для renderer process
+import { StateIndicator } from './components/StateIndicator';
+import { TooltipManager } from './components/Tooltip';
+import { OverlayState } from './types';
+
 console.log('Renderer process started');
 console.log('Platform:', window.electronAPI.platform);
+
+// Глобальные компоненты
+let stateIndicator: StateIndicator;
+let tooltipManager: TooltipManager;
 
 // Интерфейсы
 interface InteractiveRegion {
@@ -145,6 +153,85 @@ function scheduleUpdateRegions() {
   }, 100); // 100ms debounce
 }
 
+/**
+ * Инициализация UI компонентов
+ */
+function initializeUIComponents() {
+  // Создаём StateIndicator
+  stateIndicator = new StateIndicator('.status-indicator');
+
+  // Создаём TooltipManager
+  tooltipManager = new TooltipManager();
+
+  // Регистрируем tooltips для control buttons
+  const pinBtn = document.getElementById('pinBtn');
+  if (pinBtn) {
+    tooltipManager.attach(pinBtn, {
+      text: 'Always on Top',
+      hotkey: {
+        action: 'Toggle always on top',
+        keys: ['Command', 'T'],
+        platformSpecific: true
+      },
+      position: 'bottom'
+    });
+  }
+
+  console.log('UI components initialized');
+}
+
+/**
+ * Подключается к voice state updates из main process
+ */
+function connectVoiceStateUpdates() {
+  // Подписываемся на изменения состояния
+  const unsubscribe = window.electronAPI.voice.onStateChanged((voiceState) => {
+    console.log('Voice state update received:', voiceState);
+
+    // Конвертируем VoiceState в OverlayState
+    const overlayState = voiceState.state as OverlayState;
+    stateIndicator.setState(overlayState, voiceState.metadata);
+  });
+
+  // Сохраняем функцию отписки для cleanup
+  (window as any)._voiceStateUnsubscribe = unsubscribe;
+
+  // Получаем начальное состояние
+  window.electronAPI.voice.getState().then((voiceState) => {
+    console.log('Initial voice state:', voiceState);
+    const overlayState = voiceState.state as OverlayState;
+    stateIndicator.setState(overlayState, voiceState.metadata);
+  });
+
+  console.log('Voice state updates connected');
+}
+
+/**
+ * Демонстрация переходов между состояниями (для разработки)
+ */
+function demoStateTransitions() {
+  const states = [
+    OverlayState.IDLE,
+    OverlayState.LISTENING,
+    OverlayState.RECORDING,
+    OverlayState.PROCESSING,
+    OverlayState.IDLE,
+    OverlayState.ERROR
+  ];
+
+  let index = 0;
+
+  setInterval(() => {
+    const state = states[index % states.length];
+    const metadata = state === OverlayState.ERROR
+      ? { errorMessage: 'Microphone not found' }
+      : undefined;
+
+    stateIndicator.setState(state, metadata);
+    index++;
+  }, 3000);
+}
+
 // Базовая инициализация
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM loaded, overlay ready');
@@ -152,6 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Инициализация функциональности
   initializeDragAndDrop();
   initializePinButton();
+  initializeUIComponents();
+
+  // Подключаем voice state updates
+  connectVoiceStateUpdates();
 
   // Первоначальное обновление интерактивных регионов
   updateInteractiveRegions();
@@ -167,4 +258,11 @@ document.addEventListener('DOMContentLoaded', () => {
     attributes: true,
     attributeFilter: ['class', 'style']
   });
+
+  // TODO: Убрать после реализации MCP integration
+  // Демонстрация для разработки
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Running state transitions demo...');
+    // demoStateTransitions();
+  }
 });
