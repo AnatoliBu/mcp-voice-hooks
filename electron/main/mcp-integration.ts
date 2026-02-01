@@ -5,7 +5,7 @@
  * между server и overlay UI
  */
 
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import type { VoiceState } from '../preload/types';
 
 export class MCPIntegration {
@@ -118,11 +118,16 @@ export class MCPIntegration {
   }
 
   /**
-   * Отправляет обновление состояния в renderer process
+   * Отправляет обновление состояния в renderer process и main process (для tray)
    */
   private notifyRenderer(state: VoiceState): void {
     if (this.window && !this.window.isDestroyed()) {
+      // Отправляем в renderer process (для UI)
       this.window.webContents.send('voice:state-changed', state);
+      
+      // Отправляем в main process (для tray icon)
+      ipcMain.emit('voice:state-changed-internal', null, state);
+      
       console.log('Voice state changed:', state.state);
     }
   }
