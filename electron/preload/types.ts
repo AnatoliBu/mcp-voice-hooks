@@ -47,10 +47,22 @@ export interface VoiceAPI {
   onStateChanged(callback: (state: VoiceState) => void): () => void;
 }
 
+export interface MCPAPI {
+  // Отправить utterance в MCP server
+  sendUtterance(text: string): Promise<void>;
+
+  // Установить состояние voice input (активен/неактивен)
+  setVoiceInputActive(active: boolean): Promise<void>;
+
+  // Получить состояние voice input из MCP server
+  getVoiceInputState(): Promise<boolean>;
+}
+
 export interface ElectronAPI {
   platform: NodeJS.Platform;
   window: WindowAPI;
   voice: VoiceAPI;
+  mcp: MCPAPI;
 }
 
 declare global {

@@ -20,6 +20,41 @@
           <div class="status-dot"></div>
           <span>Ready</span>
         </div>
+
+        <!-- Speech controls -->
+        <div class="speech-controls">
+          <button id="toggleListeningBtn" class="primary-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" fill="currentColor"/>
+              <path d="M17 11C17 14 14.76 16.1 12 16.1C9.24 16.1 7 14 7 11H5C5 14.42 7.72 17.24 11 17.72V21H13V17.72C16.28 17.24 19 14.42 19 11H17Z" fill="currentColor"/>
+            </svg>
+            <span>Start Listening</span>
+          </button>
+
+          <!-- Mode switcher -->
+          <div class="mode-switcher">
+            <label>
+              <input type="radio" name="sendMode" value="auto" checked>
+              <span>Auto-send</span>
+            </label>
+            <label>
+              <input type="radio" name="sendMode" value="trigger-word">
+              <span>Trigger Word</span>
+            </label>
+          </div>
+
+          <!-- Trigger word input (hidden by default) -->
+          <div id="triggerWordSettings" class="trigger-word-settings hidden">
+            <label>Trigger word:</label>
+            <input type="text" id="triggerWordInput" value="send" placeholder="e.g. send, claude, go">
+          </div>
+        </div>
+
+        <!-- Interim/pending text display -->
+        <div class="speech-feedback">
+          <div id="interimText" class="interim-text hidden"></div>
+          <div id="queuedMessages" class="queued-messages hidden"></div>
+        </div>
       </div>
       <div class="controls">
         <button id="pinBtn" class="control-btn" title="Toggle Always On Top">

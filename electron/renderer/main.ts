@@ -181,6 +181,32 @@ function initializeUIComponents() {
 }
 
 /**
+ * Инициализация Speech Manager
+ */
+async function initializeSpeechManager() {
+  const { SpeechManager } = await import('./speech/speech-manager');
+  const { SpeechUI } = await import('./speech/speech-ui');
+
+  // Создаём MCP клиент для renderer процесса, используя IPC API
+  const mcpClient = {
+    async sendUtterance(text: string) {
+      await window.electronAPI.mcp.sendUtterance(text);
+    },
+    async setVoiceInputActive(active: boolean) {
+      await window.electronAPI.mcp.setVoiceInputActive(active);
+    }
+  };
+
+  const speechUI = new SpeechUI(stateIndicator);
+  const speechManager = new SpeechManager(speechUI, mcpClient);
+
+  // Сохраняем в глобальном scope для отладки
+  (window as any)._speechManager = speechManager;
+
+  console.log('Speech Manager initialized');
+}
+
+/**
  * Подключается к voice state updates из main process
  */
 function connectVoiceStateUpdates() {
@@ -233,7 +259,7 @@ function demoStateTransitions() {
 }
 
 // Базовая инициализация
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('DOM loaded, overlay ready');
 
   // Инициализация функциональности
@@ -243,6 +269,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Подключаем voice state updates
   connectVoiceStateUpdates();
+
+  // Инициализируем Speech Manager
+  await initializeSpeechManager();
 
   // Первоначальное обновление интерактивных регионов
   updateInteractiveRegions();
