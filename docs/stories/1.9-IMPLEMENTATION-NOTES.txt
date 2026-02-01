@@ -1,0 +1,1 @@
+Story 1.9: System Tray Integration documentation created. See build/icons/README.md for icon generation instructions.
