@@ -87,6 +87,156 @@ describe('Hook Management', () => {
       const result = removeVoiceHooks(undefined);
       expect(result).toEqual({});
     });
+
+    it('should remove hooks with hardcoded port in endpoint paths', () => {
+      const existing: HookSettings = {
+        Stop: [
+          {
+            matcher: '',
+            hooks: [
+              {
+                type: 'command',
+                command: 'curl -s -X POST "http://localhost:5111/api/hooks/stop" || echo \'{}\'',
+              },
+            ],
+          },
+          {
+            matcher: 'custom',
+            hooks: [
+              {
+                type: 'command',
+                command: 'custom-stop.sh',
+              },
+            ],
+          },
+        ],
+        PreToolUse: [
+          {
+            matcher: '_voice-hooks__speak$',
+            hooks: [
+              {
+                type: 'command',
+                command: 'curl -s -X POST "http://localhost:5111/api/hooks/pre-speak" || echo \'{}\'',
+              },
+            ],
+          },
+        ],
+        PostToolUse: [
+          {
+            matcher: '^(?!.*_voice-hooks__)',
+            hooks: [
+              {
+                type: 'command',
+                command: 'curl -s -X POST "http://localhost:5111/api/hooks/post-tool" || echo \'{}\'',
+              },
+            ],
+          },
+        ],
+      };
+
+      const result = removeVoiceHooks(existing);
+
+      expect(result.Stop).toHaveLength(1);
+      expect(result.Stop[0].hooks[0].command).toBe('custom-stop.sh');
+      expect(result.PreToolUse).toBeUndefined();
+      expect(result.PostToolUse).toBeUndefined();
+    });
+
+    it('should remove hooks with Node.js hook scripts', () => {
+      const existing: HookSettings = {
+        Stop: [
+          {
+            matcher: '',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/stop-hook.cjs"',
+              },
+            ],
+          },
+          {
+            matcher: 'custom',
+            hooks: [
+              {
+                type: 'command',
+                command: 'custom-stop.sh',
+              },
+            ],
+          },
+        ],
+        PreToolUse: [
+          {
+            matcher: '_voice-hooks__speak$',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-speak-hook.cjs"',
+              },
+            ],
+          },
+        ],
+        PostToolUse: [
+          {
+            matcher: '^(?!.*_voice-hooks__)',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-hook.js"',
+              },
+            ],
+          },
+        ],
+      };
+
+      const result = removeVoiceHooks(existing);
+
+      expect(result.Stop).toHaveLength(1);
+      expect(result.Stop[0].hooks[0].command).toBe('custom-stop.sh');
+      expect(result.PreToolUse).toBeUndefined();
+      expect(result.PostToolUse).toBeUndefined();
+    });
+
+    it('should remove hooks with absolute paths (Windows workaround)', () => {
+      const existing: HookSettings = {
+        Stop: [
+          {
+            matcher: '',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node "C:/Users/john/projects/myapp/.claude/hooks/stop-hook.cjs"',
+              },
+            ],
+          },
+          {
+            matcher: 'custom',
+            hooks: [
+              {
+                type: 'command',
+                command: 'custom-stop.sh',
+              },
+            ],
+          },
+        ],
+        PostToolUse: [
+          {
+            matcher: '^(?!.*_voice-hooks__)',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node "D:/dev/project/.claude/hooks/post-tool-hook.cjs"',
+              },
+            ],
+          },
+        ],
+      };
+
+      const result = removeVoiceHooks(existing);
+
+      expect(result.Stop).toHaveLength(1);
+      expect(result.Stop[0].hooks[0].command).toBe('custom-stop.sh');
+      expect(result.PostToolUse).toBeUndefined();
+    });
   });
 
   describe('replaceVoiceHooks', () => {

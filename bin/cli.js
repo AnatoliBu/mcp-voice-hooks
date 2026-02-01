@@ -110,10 +110,48 @@ async function configureClaudeCodeSettings() {
     }
   }
 
-  // Load hook configuration from plugin/hooks/hooks.json
-  const hooksJsonPath = path.join(__dirname, '..', 'plugin', 'hooks', 'hooks.json');
-  const hooksJson = JSON.parse(fs.readFileSync(hooksJsonPath, 'utf8'));
-  const hookConfig = hooksJson.hooks;
+  // Create .claude/hooks directory and copy hook scripts
+  const hooksDir = path.join(claudeDir, 'hooks');
+  if (!fs.existsSync(hooksDir)) {
+    fs.mkdirSync(hooksDir, { recursive: true });
+  }
+
+  // Copy hook scripts from plugin/hooks to project .claude/hooks
+  const pluginHooksDir = path.join(__dirname, '..', 'plugin', 'hooks');
+  const hookScripts = ['stop-hook.cjs', 'pre-speak-hook.cjs', 'post-tool-hook.cjs'];
+  for (const script of hookScripts) {
+    const src = path.join(pluginHooksDir, script);
+    const dest = path.join(hooksDir, script);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest);
+    }
+  }
+
+  // Generate hook configuration with absolute paths (Windows compatible)
+  const projectPath = process.cwd().replace(/\\/g, '/');
+  const hookConfig = {
+    Stop: [{
+      matcher: '',
+      hooks: [{
+        type: 'command',
+        command: `node "${projectPath}/.claude/hooks/stop-hook.cjs"`
+      }]
+    }],
+    PreToolUse: [{
+      matcher: '_voice-hooks__speak$',
+      hooks: [{
+        type: 'command',
+        command: `node "${projectPath}/.claude/hooks/pre-speak-hook.cjs"`
+      }]
+    }],
+    PostToolUse: [{
+      matcher: '^(?!.*_voice-hooks__)',
+      hooks: [{
+        type: 'command',
+        command: `node "${projectPath}/.claude/hooks/post-tool-hook.cjs"`
+      }]
+    }]
+  };
 
   // Replace voice hooks intelligently
   const updatedHooks = replaceVoiceHooks(settings.hooks || {}, hookConfig);

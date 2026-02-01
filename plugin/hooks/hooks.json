@@ -1,4 +1,5 @@
 {
+  "description": "Voice hooks configuration template - paths are replaced dynamically during installation",
   "hooks": {
     "Stop": [
       {
@@ -6,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST \"http://localhost:${MCP_VOICE_HOOKS_PORT:-5111}/api/hooks/stop\" || echo '{}'"
+            "command": "node \"{{PROJECT_PATH}}/.claude/hooks/stop-hook.cjs\""
           }
         ]
       }
@@ -17,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST \"http://localhost:${MCP_VOICE_HOOKS_PORT:-5111}/api/hooks/pre-speak\" || echo '{}'"
+            "command": "node \"{{PROJECT_PATH}}/.claude/hooks/pre-speak-hook.cjs\""
           }
         ]
       }
@@ -28,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST \"http://localhost:${MCP_VOICE_HOOKS_PORT:-5111}/api/hooks/post-tool\" || echo '{}'"
+            "command": "node \"{{PROJECT_PATH}}/.claude/hooks/post-tool-hook.cjs\""
           }
         ]
       }

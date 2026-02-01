@@ -19,8 +19,13 @@ export interface HookSettings {
  */
 export function removeVoiceHooks(hooks: HookSettings = {}): HookSettings {
   const cleaned: HookSettings = {};
-  // Pattern to match voice hooks by the unique environment variable
-  const voiceHookPattern = /MCP_VOICE_HOOKS_PORT/;
+  // Pattern to match voice hooks by:
+  // - environment variable MCP_VOICE_HOOKS_PORT
+  // - hardcoded endpoint paths /api/hooks/(stop|pre-speak|post-tool)
+  // - Node.js hook scripts (stop-hook|pre-speak-hook|post-tool-hook)
+  // - CLAUDE_PLUGIN_ROOT or CLAUDE_PROJECT_DIR (plugin/project mode)
+  // - absolute paths containing .claude/hooks/ (Windows workaround)
+  const voiceHookPattern = /MCP_VOICE_HOOKS_PORT|\/api\/hooks\/(stop|pre-speak|post-tool)|(stop-hook|pre-speak-hook|post-tool-hook)\.(cjs|js)|CLAUDE_PLUGIN_ROOT|CLAUDE_PROJECT_DIR|\.claude\/hooks\//;
   
   for (const [hookType, hookArray] of Object.entries(hooks)) {
     cleaned[hookType] = hookArray.filter(hookConfig => {
