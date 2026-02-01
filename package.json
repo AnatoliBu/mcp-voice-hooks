@@ -1,7 +1,7 @@
 {
   "name": "mcp-voice-hooks",
   "version": "1.0.40",
-  "main": "dist/unified-server.js",
+  "main": "dist-electron/main/index.js",
   "type": "module",
   "bin": {
     "mcp-voice-hooks": "bin/cli.js"
@@ -16,6 +16,9 @@
     "mcp": "ts-node --esm src/unified-server.ts --mcp-managed",
     "mcp-debug": "ts-node --esm src/unified-server.ts --mcp-managed --debug",
     "start": "node dist/unified-server.js",
+    "electron:dev": "vite",
+    "electron:build": "vite build && electron-builder",
+    "electron:preview": "vite build && electron dist-electron/main/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "prepare": "husky",
@@ -64,5 +67,27 @@
     "ts-prune": "^0.10.3",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
+  },
+  "build": {
+    "appId": "com.mcp-voice-hooks.app",
+    "productName": "MCP Voice Hooks",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"]
+    }
   }
 }
