@@ -1,0 +1,57 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="micGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main background -->
+  <rect width="512" height="512" rx="100" fill="url(#bgGradient)"/>
+
+  <!-- Sound waves (left side) -->
+  <g opacity="0.3" fill="white">
+    <path d="M 100 256 Q 100 220, 80 220" stroke="white" stroke-width="8" fill="none"/>
+    <path d="M 100 256 Q 100 292, 80 292" stroke="white" stroke-width="8" fill="none"/>
+    <path d="M 80 256 Q 80 200, 50 200" stroke="white" stroke-width="6" fill="none"/>
+    <path d="M 80 256 Q 80 312, 50 312" stroke="white" stroke-width="6" fill="none"/>
+  </g>
+
+  <!-- Sound waves (right side) -->
+  <g opacity="0.3" fill="white">
+    <path d="M 412 256 Q 412 220, 432 220" stroke="white" stroke-width="8" fill="none"/>
+    <path d="M 412 256 Q 412 292, 432 292" stroke="white" stroke-width="8" fill="none"/>
+    <path d="M 432 256 Q 432 200, 462 200" stroke="white" stroke-width="6" fill="none"/>
+    <path d="M 432 256 Q 432 312, 462 312" stroke="white" stroke-width="6" fill="none"/>
+  </g>
+
+  <!-- Microphone body -->
+  <g transform="translate(256, 256)">
+    <!-- Microphone capsule -->
+    <rect x="-40" y="-90" width="80" height="120" rx="40" fill="url(#micGradient)" stroke="#5a67d8" stroke-width="4"/>
+
+    <!-- Microphone grid lines -->
+    <line x1="-30" y1="-70" x2="30" y2="-70" stroke="#667eea" stroke-width="2" opacity="0.5"/>
+    <line x1="-30" y1="-50" x2="30" y2="-50" stroke="#667eea" stroke-width="2" opacity="0.5"/>
+    <line x1="-30" y1="-30" x2="30" y2="-30" stroke="#667eea" stroke-width="2" opacity="0.5"/>
+    <line x1="-30" y1="-10" x2="30" y2="-10" stroke="#667eea" stroke-width="2" opacity="0.5"/>
+    <line x1="-30" y1="10" x2="30" y2="10" stroke="#667eea" stroke-width="2" opacity="0.5"/>
+
+    <!-- Microphone stand -->
+    <path d="M -50 30 Q -50 80, 0 80 Q 50 80, 50 30" stroke="white" stroke-width="6" fill="none"/>
+    <line x1="0" y1="80" x2="0" y2="120" stroke="white" stroke-width="6"/>
+    <rect x="-50" y="120" width="100" height="10" rx="5" fill="white"/>
+  </g>
+
+  <!-- Voice hooks indicator (small circles at bottom) -->
+  <g transform="translate(256, 420)">
+    <circle cx="-30" cy="0" r="8" fill="white" opacity="0.7"/>
+    <circle cx="0" cy="0" r="8" fill="white" opacity="0.9"/>
+    <circle cx="30" cy="0" r="8" fill="white" opacity="0.7"/>
+  </g>
+</svg>
