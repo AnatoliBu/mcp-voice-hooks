@@ -2,6 +2,7 @@
 import { StateIndicator } from './components/StateIndicator';
 import { TooltipManager } from './components/Tooltip';
 import { OverlayState } from './types';
+import { WindowDrag } from './utils/window-drag';
 
 console.log('Renderer process started');
 console.log('Platform:', window.electronAPI.platform);
@@ -19,6 +20,7 @@ interface InteractiveRegion {
 }
 
 // Drag state (tracking moved to main process for smooth 60fps)
+let windowDrag: WindowDrag;
 
 /**
  * Собирает все интерактивные элементы и вычисляет их регионы
@@ -70,22 +72,7 @@ async function updateInteractiveRegions() {
  * Tracking курсора перенесён в main process для плавного 60fps
  */
 function initializeDragAndDrop() {
-  const dragHandle = document.getElementById('dragHandle');
-  if (!dragHandle) return;
-
-  dragHandle.addEventListener('mousedown', async (e: MouseEvent) => {
-    if (e.button !== 0) return; // Только левая кнопка мыши
-
-    // Передаём offset в main process, который будет polling курсор
-    await window.electronAPI.window.startDrag(e.clientX, e.clientY);
-
-    // Предотвращаем выделение текста
-    e.preventDefault();
-  });
-
-  document.addEventListener('mouseup', async () => {
-    await window.electronAPI.window.endDrag();
-  });
+  windowDrag = new WindowDrag({ dragHandleId: 'dragHandle' });
 }
 
 /**

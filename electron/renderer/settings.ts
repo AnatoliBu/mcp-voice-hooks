@@ -4,6 +4,7 @@
  */
 
 import type { AppSettings } from './types';
+import { WindowDrag } from './utils/window-drag';
 
 interface SettingsElements {
   // Language
@@ -24,22 +25,18 @@ interface SettingsElements {
   // Actions
   resetBtn: HTMLButtonElement;
   closeBtn: HTMLButtonElement;
-
-  // Drag Handle
-  dragHandle: HTMLElement;
 }
 
 class SettingsUI {
   private elements!: SettingsElements;
-  private isDragging = false;
-  private dragOffsetX = 0;
-  private dragOffsetY = 0;
+  private windowDrag: WindowDrag;
 
   constructor() {
     this.initializeElements();
     this.attachEventListeners();
     this.loadSettings();
     this.subscribeToChanges();
+    this.windowDrag = new WindowDrag({ dragHandleId: 'dragHandle' });
   }
 
   /**
@@ -64,10 +61,7 @@ class SettingsUI {
 
       // Actions
       resetBtn: document.getElementById('resetBtn') as HTMLButtonElement,
-      closeBtn: document.getElementById('closeBtn') as HTMLButtonElement,
-
-      // Drag Handle
-      dragHandle: document.getElementById('dragHandle') as HTMLElement
+      closeBtn: document.getElementById('closeBtn') as HTMLButtonElement
     };
   }
 
@@ -123,43 +117,6 @@ class SettingsUI {
     // Close button
     this.elements.closeBtn.addEventListener('click', async () => {
       await window.electronAPI.window.toggleSettings();
-    });
-
-    // Drag & drop
-    this.setupDragAndDrop();
-  }
-
-  /**
-   * Настройка drag & drop для перемещения окна
-   */
-  private setupDragAndDrop(): void {
-    this.elements.dragHandle.addEventListener('mousedown', async (e: MouseEvent) => {
-      if (e.button !== 0) return; // Только левая кнопка мыши
-
-      this.isDragging = true;
-      this.dragOffsetX = e.clientX;
-      this.dragOffsetY = e.clientY;
-
-      await window.electronAPI.window.startDrag();
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', async (e: MouseEvent) => {
-      if (!this.isDragging) return;
-
-      await window.electronAPI.window.updateDragPosition(
-        e.screenX,
-        e.screenY,
-        this.dragOffsetX,
-        this.dragOffsetY
-      );
-    });
-
-    document.addEventListener('mouseup', async () => {
-      if (!this.isDragging) return;
-
-      this.isDragging = false;
-      await window.electronAPI.window.endDrag();
     });
   }
 
