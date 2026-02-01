@@ -18,10 +18,7 @@ interface InteractiveRegion {
   height: number;
 }
 
-// Drag & drop state
-let isDragging = false;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
+// Drag state (tracking moved to main process for smooth 60fps)
 
 /**
  * Собирает все интерактивные элементы и вычисляет их регионы
@@ -70,6 +67,7 @@ async function updateInteractiveRegions() {
 
 /**
  * Инициализация drag & drop для drag handle
+ * Tracking курсора перенесён в main process для плавного 60fps
  */
 function initializeDragAndDrop() {
   const dragHandle = document.getElementById('dragHandle');
@@ -78,34 +76,14 @@ function initializeDragAndDrop() {
   dragHandle.addEventListener('mousedown', async (e: MouseEvent) => {
     if (e.button !== 0) return; // Только левая кнопка мыши
 
-    isDragging = true;
-
-    // Сохраняем offset от курсора до левого верхнего угла окна
-    dragOffsetX = e.clientX;
-    dragOffsetY = e.clientY;
-
-    await window.electronAPI.window.startDrag();
+    // Передаём offset в main process, который будет polling курсор
+    await window.electronAPI.window.startDrag(e.clientX, e.clientY);
 
     // Предотвращаем выделение текста
     e.preventDefault();
   });
 
-  // Mousemove должен быть на document, чтобы работать даже если курсор вышел за пределы handle
-  document.addEventListener('mousemove', async (e: MouseEvent) => {
-    if (!isDragging) return;
-
-    await window.electronAPI.window.updateDragPosition(
-      e.screenX,
-      e.screenY,
-      dragOffsetX,
-      dragOffsetY
-    );
-  });
-
   document.addEventListener('mouseup', async () => {
-    if (!isDragging) return;
-
-    isDragging = false;
     await window.electronAPI.window.endDrag();
   });
 }

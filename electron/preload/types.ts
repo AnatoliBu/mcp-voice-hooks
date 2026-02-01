@@ -30,9 +30,8 @@ export interface WindowAPI {
   setAlwaysOnTop(alwaysOnTop: boolean): Promise<boolean>;
   getState(): Promise<WindowState>;
 
-  // Drag & drop
-  startDrag(): Promise<void>;
-  updateDragPosition(screenX: number, screenY: number, offsetX: number, offsetY: number): Promise<void>;
+  // Drag & drop (native polling in main process)
+  startDrag(offsetX: number, offsetY: number): Promise<void>;
   endDrag(): Promise<void>;
 
   // Интерактивные зоны
