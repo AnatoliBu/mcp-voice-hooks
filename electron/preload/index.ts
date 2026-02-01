@@ -15,11 +15,8 @@ const windowAPI: WindowAPI = {
   getState: (): Promise<WindowState> =>
     ipcRenderer.invoke('window:get-state'),
 
-  startDrag: () =>
-    ipcRenderer.invoke('window:start-drag'),
-
-  updateDragPosition: (screenX: number, screenY: number, offsetX: number, offsetY: number) =>
-    ipcRenderer.invoke('window:update-drag-position', screenX, screenY, offsetX, offsetY),
+  startDrag: (offsetX: number, offsetY: number) =>
+    ipcRenderer.invoke('window:start-drag', offsetX, offsetY),
 
   endDrag: () =>
     ipcRenderer.invoke('window:end-drag'),

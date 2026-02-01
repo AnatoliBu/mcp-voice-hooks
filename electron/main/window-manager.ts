@@ -28,6 +28,11 @@ export class WindowManager {
   private lastIgnoreMouseEventsState: boolean | null = null;
   private store: Store<AppSettings>;
 
+  // Native drag state
+  private dragOffsetX = 0;
+  private dragOffsetY = 0;
+  private dragInterval: NodeJS.Timeout | null = null;
+
   constructor(overlayWindow: BrowserWindow) {
     this.overlayWindow = overlayWindow;
     this.configPath = path.join(
@@ -270,27 +275,13 @@ export class WindowManager {
       return alwaysOnTop;
     });
 
-    // Drag & drop handlers
-    ipcMain.handle('window:start-drag', async () => {
-      this.isDragging = true;
-      this.stopCursorPolling();
-      this.overlayWindow.setIgnoreMouseEvents(false);
-    });
-
-    ipcMain.handle('window:update-drag-position', async (_event, screenX: number, screenY: number, offsetX: number, offsetY: number) => {
-      if (!this.isDragging) return;
-
-      const x = screenX - offsetX;
-      const y = screenY - offsetY;
-      const validated = this.validatePosition(x, y);
-
-      this.overlayWindow.setPosition(validated.x, validated.y);
+    // Drag & drop handlers - native polling in main process
+    ipcMain.handle('window:start-drag', async (_event, offsetX: number, offsetY: number) => {
+      this.startNativeDrag(offsetX, offsetY);
     });
 
     ipcMain.handle('window:end-drag', async () => {
-      this.isDragging = false;
-      this.saveConfig();
-      this.startCursorPolling();
+      this.stopNativeDrag();
     });
 
     // Обновление интерактивных зон
@@ -307,6 +298,39 @@ export class WindowManager {
         alwaysOnTop: this.overlayWindow.isAlwaysOnTop()
       };
     });
+  }
+
+  /**
+   * Запуск native drag с polling курсора в main process
+   */
+  private startNativeDrag(offsetX: number, offsetY: number): void {
+    this.dragOffsetX = offsetX;
+    this.dragOffsetY = offsetY;
+    this.isDragging = true;
+    this.stopCursorPolling();
+    this.overlayWindow.setIgnoreMouseEvents(false);
+
+    // Polling курсора ~60fps для плавного перетаскивания
+    this.dragInterval = setInterval(() => {
+      const cursor = screen.getCursorScreenPoint();
+      const x = cursor.x - this.dragOffsetX;
+      const y = cursor.y - this.dragOffsetY;
+      const validated = this.validatePosition(x, y);
+      this.overlayWindow.setPosition(validated.x, validated.y);
+    }, 16);
+  }
+
+  /**
+   * Остановка native drag
+   */
+  private stopNativeDrag(): void {
+    if (this.dragInterval) {
+      clearInterval(this.dragInterval);
+      this.dragInterval = null;
+    }
+    this.isDragging = false;
+    this.saveConfig();
+    this.startCursorPolling();
   }
 
   /**
