@@ -1,5 +1,7 @@
 # TypeScript compiled output
 dist/
+dist-electron/
+release/
 
 # Node modules
 node_modules/
