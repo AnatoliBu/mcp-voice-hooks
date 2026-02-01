@@ -52,6 +52,12 @@ export class StateIndicator {
     this.dotElement.style.background = config.color;
     this.dotElement.style.boxShadow = `0 0 8px ${this.hexToRgba(config.color, 0.6)}`;
 
+    // Синхронизируем цвет текста с цветом dot
+    this.textElement.style.color = config.color;
+
+    // Устанавливаем data-state attribute для CSS targeting
+    this.containerElement.dataset.state = state;
+
     // Обновляем текст
     let displayText = config.text;
     if (state === OverlayState.ERROR && metadata?.errorMessage) {
