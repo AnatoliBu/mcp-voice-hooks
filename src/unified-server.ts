@@ -551,7 +551,7 @@ app.post('/api/hooks/post-tool', (_req: Request, res: Response) => {
 // API to clear all utterances
 // Delete specific utterance by ID
 app.delete('/api/utterances/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   const deleted = queue.delete(id);
 
@@ -654,7 +654,15 @@ app.post('/api/voice-preferences', (req: Request, res: Response) => {
   });
 });
 
-// API for voice input state
+// API for voice input state (GET - for Electron to check current state)
+app.get('/api/voice-input-state', (_req: Request, res: Response) => {
+  res.json({
+    voiceInputActive: voicePreferences.voiceInputActive,
+    voiceResponsesEnabled: voicePreferences.voiceResponsesEnabled
+  });
+});
+
+// API for voice input state (POST - for browser to set state)
 app.post('/api/voice-input-state', (req: Request, res: Response) => {
   const { active } = req.body;
 
