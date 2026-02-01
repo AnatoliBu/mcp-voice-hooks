@@ -97,6 +97,78 @@ body {
   transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Context Hint Row */
+.context-hint {
+  margin-top: 6px;
+  padding-left: 18px; /* Aligns with text after dot */
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.context-hint .hint-text {
+  font-style: italic;
+}
+
+/* Show different hints based on state */
+.status-indicator[data-state="listening"] + .context-hint,
+.status-indicator[data-state="recording"] + .context-hint {
+  color: rgba(59, 130, 246, 0.7);
+}
+
+.status-indicator[data-state="idle"] + .context-hint {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ===== STATE-BASED STYLING ===== */
+
+/* CSS targeting by data-state attribute */
+.status-indicator[data-state="idle"] .status-dot {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+}
+
+.status-indicator[data-state="listening"] .status-dot {
+  background: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+}
+
+.status-indicator[data-state="recording"] .status-dot {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.status-indicator[data-state="processing"] .status-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.status-indicator[data-state="error"] .status-dot {
+  background: #dc2626;
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
+}
+
+/* State-based text colors */
+.status-indicator[data-state="idle"] span {
+  color: #4ade80;
+}
+
+.status-indicator[data-state="listening"] span {
+  color: #3b82f6;
+}
+
+.status-indicator[data-state="recording"] span {
+  color: #ef4444;
+}
+
+.status-indicator[data-state="processing"] span {
+  color: #f59e0b;
+}
+
+.status-indicator[data-state="error"] span {
+  color: #dc2626;
+}
+
 /* ===== ANIMATIONS ===== */
 
 /* Pulse Animation - Slow (idle state) */

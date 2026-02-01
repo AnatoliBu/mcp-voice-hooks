@@ -16,6 +16,7 @@ export class SpeechUI {
   private modeRadios: NodeListOf<HTMLInputElement> | null;
   private triggerWordSettings: HTMLElement | null;
   private triggerWordInput: HTMLInputElement | null;
+  private contextHintEl: HTMLElement | null;
 
   constructor(stateIndicator: StateIndicator) {
     this.stateIndicator = stateIndicator;
@@ -25,6 +26,10 @@ export class SpeechUI {
     this.modeRadios = document.querySelectorAll('input[name="sendMode"]');
     this.triggerWordSettings = document.getElementById('triggerWordSettings');
     this.triggerWordInput = document.getElementById('triggerWordInput') as HTMLInputElement;
+    this.contextHintEl = document.getElementById('contextHint');
+
+    // Initialize context hint with default mode
+    this.updateContextHint(SendMode.AUTO);
   }
 
   setState(state: OverlayState, metadata?: unknown): void {
@@ -75,6 +80,23 @@ export class SpeechUI {
         this.triggerWordSettings.classList.add('is-hidden');
       }
     }
+
+    // Обновляем context hint
+    this.updateContextHint(mode);
+  }
+
+  private updateContextHint(mode: SendMode): void {
+    if (!this.contextHintEl) return;
+
+    const hintTextEl = this.contextHintEl.querySelector('.hint-text');
+    if (!hintTextEl) return;
+
+    if (mode === SendMode.AUTO) {
+      hintTextEl.textContent = 'Auto-send on pause';
+    } else {
+      const triggerWord = this.getTriggerWord();
+      hintTextEl.textContent = `Say "${triggerWord}" to send`;
+    }
   }
 
   getTriggerWord(): string {
@@ -97,7 +119,10 @@ export class SpeechUI {
     if (!this.triggerWordInput) return;
 
     this.triggerWordInput.addEventListener('change', () => {
-      callback(this.getTriggerWord());
+      const word = this.getTriggerWord();
+      callback(word);
+      // Обновляем context hint при изменении trigger word
+      this.updateContextHint(SendMode.TRIGGER_WORD);
     });
   }
 
