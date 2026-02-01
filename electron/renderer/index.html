@@ -8,8 +8,26 @@
 </head>
 <body>
   <div id="app">
-    <div class="overlay-container">
-      <p>Voice Hooks Overlay - Ready</p>
+    <div class="overlay-container" id="overlay">
+      <div class="drag-handle" id="dragHandle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 5H7V7H9V5ZM9 11H7V13H9V11ZM9 17H7V19H9V17ZM17 5H15V7H17V5ZM17 11H15V13H17V11ZM17 17H15V19H17V17Z" fill="currentColor"/>
+        </svg>
+        <span>Voice Hooks</span>
+      </div>
+      <div class="content">
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span>Ready</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="pinBtn" class="control-btn" title="Toggle Always On Top">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 9V4H17V2H7V4H8V9C8 9.55 7.55 10 7 10H6V12H11V20L12 21L13 20V12H18V10H17C16.45 10 16 9.55 16 9Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
   <script type="module" src="./main.ts"></script>
