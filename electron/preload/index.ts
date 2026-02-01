@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronAPI, WindowAPI, VoiceAPI, InteractiveRegion, WindowState, VoiceState } from './types';
+import type { ElectronAPI, WindowAPI, VoiceAPI, SettingsAPI, InteractiveRegion, WindowState, VoiceState, AppSettings } from './types';
 
 // Window API для управления окном из renderer
 const windowAPI: WindowAPI = {
@@ -25,7 +25,10 @@ const windowAPI: WindowAPI = {
     ipcRenderer.invoke('window:end-drag'),
 
   updateInteractiveRegions: (regions: InteractiveRegion[]) =>
-    ipcRenderer.invoke('window:update-interactive-regions', regions)
+    ipcRenderer.invoke('window:update-interactive-regions', regions),
+
+  toggleSettings: () =>
+    ipcRenderer.invoke('window:toggle-settings')
 };
 
 // Voice API для управления голосовым вводом
@@ -44,12 +47,49 @@ const voiceAPI: VoiceAPI = {
   }
 };
 
+// Settings API для управления настройками
+const settingsAPI: SettingsAPI = {
+  get: (): Promise<AppSettings> =>
+    ipcRenderer.invoke('settings:get'),
+
+  set: (settings: Partial<AppSettings>): Promise<AppSettings> =>
+    ipcRenderer.invoke('settings:set', settings),
+
+  reset: (): Promise<AppSettings> =>
+    ipcRenderer.invoke('settings:reset'),
+
+  onChange: (callback: (settings: AppSettings) => void) => {
+    const listener = (_event: any, settings: AppSettings) => callback(settings);
+    ipcRenderer.on('settings:changed', listener);
+
+    // Возвращаем функцию для отписки
+    return () => {
+      ipcRenderer.removeListener('settings:changed', listener);
+    };
+  }
+};
+
+// MCP API (заглушка - будет добавлена при интеграции MCP)
+const mcpAPI = {
+  sendUtterance: async (text: string) => {
+    await ipcRenderer.invoke('mcp:send-utterance', text);
+  },
+  setVoiceInputActive: async (active: boolean) => {
+    await ipcRenderer.invoke('mcp:set-voice-input-active', active);
+  },
+  getVoiceInputState: async (): Promise<boolean> => {
+    return ipcRenderer.invoke('mcp:get-voice-input-state');
+  }
+};
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 const api: ElectronAPI = {
   platform: process.platform,
   window: windowAPI,
-  voice: voiceAPI
+  voice: voiceAPI,
+  mcp: mcpAPI,
+  settings: settingsAPI
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

@@ -37,6 +37,9 @@ export interface WindowAPI {
 
   // Интерактивные зоны
   updateInteractiveRegions(regions: InteractiveRegion[]): Promise<void>;
+
+  // Settings window
+  toggleSettings(): Promise<void>;
 }
 
 export interface VoiceAPI {
@@ -58,11 +61,42 @@ export interface MCPAPI {
   getVoiceInputState(): Promise<boolean>;
 }
 
+export interface AppSettings {
+  // Speech Recognition
+  language: string; // 'en-US', 'ru-RU', etc.
+
+  // Send Mode
+  sendMode: 'auto' | 'trigger-word';
+  triggerWord: string; // default: 'send'
+
+  // TTS Settings
+  volume: number; // 0.0 - 1.0
+  rate: number; // 0.5 - 2.0
+
+  // UI Preferences (future)
+  theme?: 'light' | 'dark';
+}
+
+export interface SettingsAPI {
+  // Получить текущие настройки
+  get(): Promise<AppSettings>;
+
+  // Установить настройки (частично или полностью)
+  set(settings: Partial<AppSettings>): Promise<AppSettings>;
+
+  // Сбросить настройки к значениям по умолчанию
+  reset(): Promise<AppSettings>;
+
+  // Подписаться на изменения настроек
+  onChange(callback: (settings: AppSettings) => void): () => void;
+}
+
 export interface ElectronAPI {
   platform: NodeJS.Platform;
   window: WindowAPI;
   voice: VoiceAPI;
   mcp: MCPAPI;
+  settings: SettingsAPI;
 }
 
 declare global {

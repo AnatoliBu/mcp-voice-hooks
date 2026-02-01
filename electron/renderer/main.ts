@@ -139,6 +139,18 @@ function initializePinButton() {
 }
 
 /**
+ * Инициализация settings button
+ */
+function initializeSettingsButton() {
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (!settingsBtn) return;
+
+  settingsBtn.addEventListener('click', async () => {
+    await window.electronAPI.window.toggleSettings();
+  });
+}
+
+/**
  * Debounced update интерактивных регионов
  */
 let updateRegionsTimeout: number | null = null;
@@ -265,6 +277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Инициализация функциональности
   initializeDragAndDrop();
   initializePinButton();
+  initializeSettingsButton();
   initializeUIComponents();
 
   // Подключаем voice state updates

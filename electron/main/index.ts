@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron';
 import * as path from 'path';
 import { WindowManager } from './window-manager';
 import { MCPIntegration } from './mcp-integration';
@@ -67,6 +67,23 @@ ipcMain.handle('voice:get-state', async () => {
 app.whenReady().then(() => {
   createWindow();
 
+  // Регистрация глобального hotkey для Settings
+  // Cmd+, на macOS, Ctrl+, на Windows/Linux
+  const settingsShortcut = process.platform === 'darwin'
+    ? 'Command+,'
+    : 'Control+,';
+
+  const registered = globalShortcut.register(settingsShortcut, () => {
+    console.log(`${settingsShortcut} pressed - toggling settings`);
+    windowManager?.toggleSettingsWindow();
+  });
+
+  if (registered) {
+    console.log(`Settings hotkey ${settingsShortcut} registered`);
+  } else {
+    console.error(`Failed to register settings hotkey ${settingsShortcut}`);
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -78,4 +95,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('will-quit', () => {
+  // Unregister all shortcuts
+  globalShortcut.unregisterAll();
 });
