@@ -50,10 +50,12 @@ class MessengerClient {
         this.isPausedForTTS = false; // Flag to prevent auto-restart during TTS pause
 
         // PTT state
-        this.pttKey = 'Space'; // Default PTT key
+        this.pttKey = 'Ctrl+Space'; // Default PTT key (uses Ctrl+Space to avoid WCAG conflicts)
         this.isPTTActive = false; // Is PTT recording active
+        this.isPTTStopping = false; // Flag to prevent race condition in stopPTT
         this.pttMinDuration = 300; // Minimum recording duration in ms (to avoid accidental triggers)
         this.pttStartTime = null; // When PTT started
+        this.pttKeyParts = []; // Parts of PTT key combination for keyup detection
 
         // PTT elements
         this.pttKeybindingContainer = document.getElementById('pttKeybindingContainer');
@@ -351,9 +353,13 @@ class MessengerClient {
         const savedPttKey = localStorage.getItem('pttKey');
         if (savedPttKey) {
             this.pttKey = savedPttKey;
+            this.pttKeyParts = savedPttKey.split('+');
             if (this.pttKeybindingInput) {
                 this.pttKeybindingInput.value = savedPttKey;
             }
+        } else {
+            // Initialize pttKeyParts from default pttKey
+            this.pttKeyParts = this.pttKey.split('+');
         }
 
         // Show/hide PTT status based on loaded send mode
@@ -487,8 +493,14 @@ class MessengerClient {
             }
         });
 
-        // Microphone button
-        this.micBtn.addEventListener('click', () => this.toggleVoiceDictation());
+        // Microphone button - suppress click in PTT mode to prevent toggling dictation after mouseup
+        this.micBtn.addEventListener('click', (e) => {
+            if (this.sendMode === 'ptt') {
+                e.preventDefault();
+                return;
+            }
+            this.toggleVoiceDictation();
+        });
 
         // Send mode radio buttons
         this.sendModeRadios.forEach(radio => {
@@ -654,20 +666,11 @@ class MessengerClient {
             e.preventDefault();
             e.stopPropagation();
 
-            // Capture the key
-            let keyName = e.key;
-            if (e.key === ' ') keyName = 'Space';
-            if (e.key === 'Control') keyName = 'Ctrl';
-
-            // Store modifier state
-            const modifiers = [];
-            if (e.ctrlKey && e.key !== 'Control') modifiers.push('Ctrl');
-            if (e.altKey && e.key !== 'Alt') modifiers.push('Alt');
-            if (e.shiftKey && e.key !== 'Shift') modifiers.push('Shift');
-
-            const fullKey = [...modifiers, keyName].join('+');
+            // Capture the key using shared key name logic
+            const fullKey = this.getKeyName(e);
 
             this.pttKey = fullKey;
+            this.pttKeyParts = fullKey.split('+');
             this.pttKeybindingInput.value = fullKey;
             localStorage.setItem('pttKey', fullKey);
 
@@ -677,12 +680,17 @@ class MessengerClient {
     }
 
     setupPTTKeyboardEvents() {
+        // Interactive elements that should not trigger PTT
+        const INTERACTIVE_TAGS = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'];
+
         // Handle keydown for PTT start
         document.addEventListener('keydown', (e) => {
             if (this.sendMode !== 'ptt') return;
             if (this.isPTTActive) return; // Already recording
-            if (document.activeElement === this.messageInput) return; // Don't capture when typing
-            if (document.activeElement === this.pttKeybindingInput) return; // Don't capture during keybind
+
+            // Don't capture when focused on interactive elements
+            const activeTag = document.activeElement?.tagName;
+            if (activeTag && INTERACTIVE_TAGS.includes(activeTag)) return;
 
             const keyName = this.getKeyName(e);
             if (keyName === this.pttKey) {
@@ -692,12 +700,16 @@ class MessengerClient {
         });
 
         // Handle keyup for PTT stop
+        // When using modifier combinations like Ctrl+Space, releasing ANY key in the combination should stop PTT
         document.addEventListener('keyup', (e) => {
             if (this.sendMode !== 'ptt') return;
             if (!this.isPTTActive) return;
 
-            const keyName = this.getKeyName(e);
-            if (keyName === this.pttKey) {
+            // Get the base key name (without checking current modifier state)
+            const releasedKey = this.getBaseKeyName(e);
+
+            // Stop PTT if the released key is part of the PTT key combination
+            if (this.pttKeyParts.includes(releasedKey)) {
                 e.preventDefault();
                 this.stopPTT();
             }
@@ -709,6 +721,15 @@ class MessengerClient {
                 this.stopPTT();
             }
         });
+    }
+
+    // Get base key name without modifier state (for keyup detection)
+    getBaseKeyName(e) {
+        let keyName = e.key;
+        if (e.key === ' ') keyName = 'Space';
+        if (e.key === 'Control') keyName = 'Ctrl';
+        if (e.key === 'Meta') keyName = 'Meta';
+        return keyName;
     }
 
     getKeyName(e) {
@@ -730,6 +751,11 @@ class MessengerClient {
         this.isPTTActive = true;
         this.pttStartTime = Date.now();
         this.micBtn.classList.add('ptt-recording');
+
+        // Ensure pttKeyParts is populated (in case loaded from localStorage)
+        if (this.pttKeyParts.length === 0) {
+            this.pttKeyParts = this.pttKey.split('+');
+        }
 
         // Show PTT status
         if (this.pttStatus) {
@@ -768,14 +794,23 @@ class MessengerClient {
             this.isPTTActive = false;
             this.isListening = false;
             this.micBtn.classList.remove('ptt-recording');
+            // Clean up PTT status UI on error
+            if (this.pttStatus) {
+                this.pttStatus.classList.remove('recording');
+                if (this.pttStatusText) {
+                    this.pttStatusText.textContent = 'Hold to talk...';
+                }
+            }
         }
     }
 
     async stopPTT() {
-        if (!this.isPTTActive) return;
+        if (!this.isPTTActive || this.isPTTStopping) return;
+
+        // Set stopping flag to prevent race condition
+        this.isPTTStopping = true;
 
         const duration = Date.now() - this.pttStartTime;
-        this.isPTTActive = false;
         this.micBtn.classList.remove('ptt-recording');
 
         // Hide PTT status recording state
@@ -797,6 +832,8 @@ class MessengerClient {
             this.debugLog(`[PTT] Recording too short (${duration}ms), discarding`);
             this.messageInput.value = '';
             await this.updateVoiceInputState(false);
+            this.isPTTActive = false;
+            this.isPTTStopping = false;
             return;
         }
 
@@ -810,6 +847,10 @@ class MessengerClient {
 
         await this.updateVoiceInputState(false);
         this.debugLog('[PTT] Stopped recording');
+
+        // Reset flags after all async operations complete
+        this.isPTTActive = false;
+        this.isPTTStopping = false;
     }
 
     async loadData() {
