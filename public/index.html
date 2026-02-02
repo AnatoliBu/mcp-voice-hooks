@@ -349,6 +349,98 @@
             width: 120px;
         }
 
+        .ptt-keybinding-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ptt-keybinding-input label {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .ptt-keybinding-input input {
+            padding: 4px 8px;
+            border: 1px solid #DDD;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 100px;
+            text-align: center;
+            cursor: pointer;
+            background: #F8F9FA;
+        }
+
+        .ptt-keybinding-input input:focus {
+            border-color: #007AFF;
+            background: white;
+        }
+
+        .ptt-hint {
+            font-size: 11px;
+            color: #999;
+        }
+
+        /* PTT Recording State */
+        .mic-button.ptt-recording {
+            background: #EF5350;
+            animation: pttPulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pttPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.7);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 0 12px rgba(239, 83, 80, 0);
+                transform: scale(1.05);
+            }
+        }
+
+        /* PTT Status Indicator */
+        .ptt-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #F5F5F5;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .ptt-status.recording {
+            background: #FFEBEE;
+        }
+
+        .ptt-status-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #9E9E9E;
+        }
+
+        .ptt-status.recording .ptt-status-icon {
+            background: #EF5350;
+            animation: pttStatusPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pttStatusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .ptt-status-text {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .ptt-status.recording .ptt-status-text {
+            color: #EF5350;
+            font-weight: 500;
+        }
+
         /* Text Input Container */
         .input-container {
             display: flex;
@@ -771,6 +863,10 @@
                         <input type="radio" id="triggerMode" name="sendMode" value="trigger">
                         <label for="triggerMode">Wait for trigger word</label>
                     </div>
+                    <div class="send-mode-radio">
+                        <input type="radio" id="pttMode" name="sendMode" value="ptt">
+                        <label for="pttMode">Push-to-talk</label>
+                    </div>
                     <div class="trigger-word-input" id="triggerWordInputContainer" style="display: none;">
                         <label for="triggerWordInput">Trigger:</label>
                         <input
@@ -779,6 +875,17 @@
                             placeholder="e.g., send, go"
                             value="send"
                         >
+                    </div>
+                    <div class="ptt-keybinding-input" id="pttKeybindingContainer" style="display: none;">
+                        <label for="pttKeybindingInput">Hold key:</label>
+                        <input
+                            type="text"
+                            id="pttKeybindingInput"
+                            placeholder="Press a key..."
+                            value="Space"
+                            readonly
+                        >
+                        <span class="ptt-hint">(or hold mic button)</span>
                     </div>
                 </div>
 
@@ -795,6 +902,12 @@
                             <path d="M12 1C10.34 1 9 2.34 9 4V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V4C15 2.34 13.66 1 12 1ZM19 12C19 15.53 16.39 18.44 13 18.93V22H11V18.93C7.61 18.44 5 15.53 5 12H7C7 14.76 9.24 17 12 17C14.76 17 17 14.76 17 12H19Z" />
                         </svg>
                     </button>
+                </div>
+
+                <!-- PTT Status Indicator -->
+                <div id="pttStatus" class="ptt-status" style="display: none;">
+                    <div class="ptt-status-icon"></div>
+                    <span class="ptt-status-text">Hold to talk...</span>
                 </div>
 
                 <!-- Speech Recognition Language (always visible) -->

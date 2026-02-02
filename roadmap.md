@@ -35,6 +35,15 @@ Create an MCP server that enables real-time voice interaction with Claude Code a
 
 ### Next tasks
 
+- [x] Add Push-to-Talk (Walkie-Talkie) Mode
+  - [x] Server endpoint for PTT control (`POST /api/ptt`)
+  - [x] PTT mode radio button in UI
+  - [x] Configurable PTT keybinding
+  - [x] PTT JavaScript logic with keyboard events
+  - [x] External PTT trigger support via SSE
+  - [x] Visual feedback for recording state
+  - [x] Minimum recording duration filter (300ms)
+  - [x] Touch support for mobile
 - [ ] Add ability to delete pending messages in messenger UI
 - [x] Add UI switch buttons in both interfaces
   - [x] Add button in messenger UI top right to switch to legacy UI

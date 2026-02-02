@@ -677,6 +677,26 @@ app.post('/api/voice-input-state', (req: Request, res: Response) => {
   });
 });
 
+// POST /api/ptt - Push-to-talk control (for external PTT triggers)
+app.post('/api/ptt', (req: Request, res: Response) => {
+  const { action } = req.body;
+
+  if (!action || !['start', 'stop'].includes(action)) {
+    res.status(400).json({ error: 'Invalid action. Must be "start" or "stop"' });
+    return;
+  }
+
+  // Broadcast PTT event to all connected browser clients
+  const message = JSON.stringify({ type: 'ptt', action });
+  ttsClients.forEach(client => {
+    client.write(`data: ${message}\n\n`);
+  });
+
+  debugLog(`[PTT] ${action === 'start' ? 'Started' : 'Stopped'} recording`);
+
+  res.json({ success: true, action });
+});
+
 // API for text-to-speech
 app.post('/api/speak', async (req: Request, res: Response) => {
   const { text } = req.body;

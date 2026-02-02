@@ -484,6 +484,20 @@ export class TestServer {
 
       res.json({ decision: 'approve' });
     });
+
+    // POST /api/ptt - Push-to-talk control
+    this.app.post('/api/ptt', (req, res) => {
+      const { action } = req.body;
+
+      if (!action || !['start', 'stop'].includes(action)) {
+        res.status(400).json({ error: 'Invalid action. Must be "start" or "stop"' });
+        return;
+      }
+
+      // In real server, this broadcasts to SSE clients
+      // For testing, we just acknowledge the request
+      res.json({ success: true, action });
+    });
   }
 
   /**

@@ -49,6 +49,18 @@ class MessengerClient {
         this.pauseMicDuringTTS = true; // Pause mic during speech to avoid echo
         this.isPausedForTTS = false; // Flag to prevent auto-restart during TTS pause
 
+        // PTT state
+        this.pttKey = 'Space'; // Default PTT key
+        this.isPTTActive = false; // Is PTT recording active
+        this.pttMinDuration = 300; // Minimum recording duration in ms (to avoid accidental triggers)
+        this.pttStartTime = null; // When PTT started
+
+        // PTT elements
+        this.pttKeybindingContainer = document.getElementById('pttKeybindingContainer');
+        this.pttKeybindingInput = document.getElementById('pttKeybindingInput');
+        this.pttStatus = document.getElementById('pttStatus');
+        this.pttStatusText = this.pttStatus?.querySelector('.ptt-status-text');
+
         // Initialize
         this.initializeSpeechRecognition();
         this.initializeSpeechSynthesis();
@@ -59,6 +71,10 @@ class MessengerClient {
 
         // Auto-refresh every 2 seconds
         setInterval(() => this.loadData(), 2000);
+
+        // Initialize PTT
+        this.setupPTTKeyCapture();
+        this.setupPTTKeyboardEvents();
     }
 
     debugLog(...args) {
@@ -120,6 +136,8 @@ class MessengerClient {
                     this.speakText(data.text);
                 } else if (data.type === 'waitStatus') {
                     this.handleWaitStatus(data.isWaiting);
+                } else if (data.type === 'ptt') {
+                    this.handlePTTEvent(data.action);
                 }
             } catch (error) {
                 console.error('Failed to parse TTS event:', error);
@@ -138,6 +156,20 @@ class MessengerClient {
             if (isWaiting) {
                 this.scrollToBottom();
             }
+        }
+    }
+
+    handlePTTEvent(action) {
+        // Handle PTT events from external sources (e.g., helper script)
+        if (this.sendMode !== 'ptt') {
+            this.debugLog('[PTT] Ignoring external PTT event - not in PTT mode');
+            return;
+        }
+
+        if (action === 'start') {
+            this.startPTT();
+        } else if (action === 'stop') {
+            this.stopPTT();
         }
     }
 
@@ -299,6 +331,11 @@ class MessengerClient {
             // Show/hide trigger word input
             this.triggerWordInputContainer.style.display =
                 this.sendMode === 'trigger' ? 'flex' : 'none';
+            // Show/hide PTT keybinding input
+            if (this.pttKeybindingContainer) {
+                this.pttKeybindingContainer.style.display =
+                    this.sendMode === 'ptt' ? 'flex' : 'none';
+            }
         }
 
         // Load trigger word preference
@@ -308,6 +345,21 @@ class MessengerClient {
             if (this.triggerWordInput) {
                 this.triggerWordInput.value = savedTriggerWord;
             }
+        }
+
+        // Load PTT key preference
+        const savedPttKey = localStorage.getItem('pttKey');
+        if (savedPttKey) {
+            this.pttKey = savedPttKey;
+            if (this.pttKeybindingInput) {
+                this.pttKeybindingInput.value = savedPttKey;
+            }
+        }
+
+        // Show/hide PTT status based on loaded send mode
+        if (this.pttStatus) {
+            this.pttStatus.style.display =
+                this.sendMode === 'ptt' ? 'flex' : 'none';
         }
     }
 
@@ -444,7 +496,21 @@ class MessengerClient {
                 this.sendMode = e.target.value;
                 this.triggerWordInputContainer.style.display =
                     this.sendMode === 'trigger' ? 'flex' : 'none';
+                this.pttKeybindingContainer.style.display =
+                    this.sendMode === 'ptt' ? 'flex' : 'none';
+
+                // Show/hide PTT status
+                if (this.pttStatus) {
+                    this.pttStatus.style.display =
+                        this.sendMode === 'ptt' ? 'flex' : 'none';
+                }
+
                 localStorage.setItem('sendMode', this.sendMode);
+
+                // If switching away from PTT, stop any active PTT session
+                if (this.sendMode !== 'ptt' && this.isPTTActive) {
+                    this.stopPTT();
+                }
             });
         });
 
@@ -544,6 +610,206 @@ class MessengerClient {
                 localStorage.setItem('pauseMicDuringTTS', this.pauseMicDuringTTS.toString());
             });
         }
+
+        // Microphone button - support PTT hold
+        this.micBtn.addEventListener('mousedown', (e) => {
+            if (this.sendMode === 'ptt') {
+                e.preventDefault();
+                this.startPTT();
+            }
+        });
+
+        this.micBtn.addEventListener('mouseup', () => {
+            if (this.sendMode === 'ptt' && this.isPTTActive) {
+                this.stopPTT();
+            }
+        });
+
+        this.micBtn.addEventListener('mouseleave', () => {
+            // Stop if mouse leaves button while holding
+            if (this.sendMode === 'ptt' && this.isPTTActive) {
+                this.stopPTT();
+            }
+        });
+
+        // Touch support for mobile PTT
+        this.micBtn.addEventListener('touchstart', (e) => {
+            if (this.sendMode === 'ptt') {
+                e.preventDefault();
+                this.startPTT();
+            }
+        });
+
+        this.micBtn.addEventListener('touchend', () => {
+            if (this.sendMode === 'ptt' && this.isPTTActive) {
+                this.stopPTT();
+            }
+        });
+    }
+
+    setupPTTKeyCapture() {
+        if (!this.pttKeybindingInput) return;
+
+        this.pttKeybindingInput.addEventListener('keydown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Capture the key
+            let keyName = e.key;
+            if (e.key === ' ') keyName = 'Space';
+            if (e.key === 'Control') keyName = 'Ctrl';
+
+            // Store modifier state
+            const modifiers = [];
+            if (e.ctrlKey && e.key !== 'Control') modifiers.push('Ctrl');
+            if (e.altKey && e.key !== 'Alt') modifiers.push('Alt');
+            if (e.shiftKey && e.key !== 'Shift') modifiers.push('Shift');
+
+            const fullKey = [...modifiers, keyName].join('+');
+
+            this.pttKey = fullKey;
+            this.pttKeybindingInput.value = fullKey;
+            localStorage.setItem('pttKey', fullKey);
+
+            // Blur the input after capture
+            this.pttKeybindingInput.blur();
+        });
+    }
+
+    setupPTTKeyboardEvents() {
+        // Handle keydown for PTT start
+        document.addEventListener('keydown', (e) => {
+            if (this.sendMode !== 'ptt') return;
+            if (this.isPTTActive) return; // Already recording
+            if (document.activeElement === this.messageInput) return; // Don't capture when typing
+            if (document.activeElement === this.pttKeybindingInput) return; // Don't capture during keybind
+
+            const keyName = this.getKeyName(e);
+            if (keyName === this.pttKey) {
+                e.preventDefault();
+                this.startPTT();
+            }
+        });
+
+        // Handle keyup for PTT stop
+        document.addEventListener('keyup', (e) => {
+            if (this.sendMode !== 'ptt') return;
+            if (!this.isPTTActive) return;
+
+            const keyName = this.getKeyName(e);
+            if (keyName === this.pttKey) {
+                e.preventDefault();
+                this.stopPTT();
+            }
+        });
+
+        // Handle focus loss - stop PTT
+        window.addEventListener('blur', () => {
+            if (this.isPTTActive) {
+                this.stopPTT();
+            }
+        });
+    }
+
+    getKeyName(e) {
+        let keyName = e.key;
+        if (e.key === ' ') keyName = 'Space';
+        if (e.key === 'Control') keyName = 'Ctrl';
+
+        const modifiers = [];
+        if (e.ctrlKey && e.key !== 'Control') modifiers.push('Ctrl');
+        if (e.altKey && e.key !== 'Alt') modifiers.push('Alt');
+        if (e.shiftKey && e.key !== 'Shift') modifiers.push('Shift');
+
+        return [...modifiers, keyName].join('+');
+    }
+
+    async startPTT() {
+        if (this.isPTTActive) return;
+
+        this.isPTTActive = true;
+        this.pttStartTime = Date.now();
+        this.micBtn.classList.add('ptt-recording');
+
+        // Show PTT status
+        if (this.pttStatus) {
+            this.pttStatus.style.display = 'flex';
+            this.pttStatus.classList.add('recording');
+            if (this.pttStatusText) {
+                this.pttStatusText.textContent = 'Recording...';
+            }
+        }
+
+        // Clear any existing text
+        this.messageInput.value = '';
+        this.accumulatedText = '';
+
+        // Start recognition
+        if (!this.recognition) {
+            console.error('Speech recognition not available');
+            this.isPTTActive = false;
+            this.micBtn.classList.remove('ptt-recording');
+            if (this.pttStatus) {
+                this.pttStatus.classList.remove('recording');
+                if (this.pttStatusText) {
+                    this.pttStatusText.textContent = 'Hold to talk...';
+                }
+            }
+            return;
+        }
+
+        try {
+            this.isListening = true;
+            this.recognition.start();
+            await this.updateVoiceInputState(true);
+            this.debugLog('[PTT] Started recording');
+        } catch (e) {
+            console.error('Failed to start PTT recognition:', e);
+            this.isPTTActive = false;
+            this.isListening = false;
+            this.micBtn.classList.remove('ptt-recording');
+        }
+    }
+
+    async stopPTT() {
+        if (!this.isPTTActive) return;
+
+        const duration = Date.now() - this.pttStartTime;
+        this.isPTTActive = false;
+        this.micBtn.classList.remove('ptt-recording');
+
+        // Hide PTT status recording state
+        if (this.pttStatus) {
+            this.pttStatus.classList.remove('recording');
+            if (this.pttStatusText) {
+                this.pttStatusText.textContent = 'Hold to talk...';
+            }
+        }
+
+        // Stop recognition
+        if (this.recognition) {
+            this.isListening = false;
+            this.recognition.stop();
+        }
+
+        // Check minimum duration
+        if (duration < this.pttMinDuration) {
+            this.debugLog(`[PTT] Recording too short (${duration}ms), discarding`);
+            this.messageInput.value = '';
+            await this.updateVoiceInputState(false);
+            return;
+        }
+
+        // Send the accumulated text
+        const text = this.messageInput.value.trim();
+        if (text) {
+            this.debugLog(`[PTT] Sending: "${text}"`);
+            await this.sendMessage(text);
+            this.messageInput.value = '';
+        }
+
+        await this.updateVoiceInputState(false);
+        this.debugLog('[PTT] Stopped recording');
     }
 
     async loadData() {

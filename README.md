@@ -60,6 +60,21 @@ By default, utterances are sent automatically when you pause. You can switch to 
 
 The trigger word is case-insensitive and will be automatically removed from your message before sending.
 
+### 5. Push-to-Talk Mode (Optional)
+
+For hands-free operation with precise control, use Push-to-Talk mode:
+
+1. Select "Push-to-talk" mode in the browser interface
+2. Configure your preferred key (default: Space)
+3. Hold the key to record, release to send
+4. Or hold the microphone button to record
+
+**Features:**
+- Configurable keybinding (any key or key combination like Ctrl+Space)
+- Visual feedback showing recording state
+- Automatic discard of accidental short recordings (<300ms)
+- Support for external PTT triggers via API
+
 ## Browser Compatibility
 
 - ✅ **Chrome**: Full support for speech recognition, browser text-to-speech, and system text-to-speech
