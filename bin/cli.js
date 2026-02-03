@@ -33,6 +33,9 @@ async function main() {
     } else if (command === 'uninstall') {
       console.log('🗑️  Uninstalling MCP Voice Hooks...');
       await uninstall();
+    } else if (command === 'ptt-helper') {
+      // Run the PTT helper script with remaining arguments
+      await runPTTHelper(args.slice(1));
     } else {
       // Default behavior: ensure hooks are installed/updated, then run the MCP server
       console.log('🎤 MCP Voice Hooks - Starting server...');
@@ -156,8 +159,28 @@ async function configureClaudeCodeSettings() {
   // Replace voice hooks intelligently
   const updatedHooks = replaceVoiceHooks(settings.hooks || {}, hookConfig);
 
+  // Configure PTT environment variables (only on Windows)
+  if (process.platform === 'win32') {
+    if (!settings.env) {
+      settings.env = {};
+    }
+    // Only set PTT defaults if not already configured
+    if (!settings.env.MCP_VOICE_HOOKS_PTT) {
+      settings.env.MCP_VOICE_HOOKS_PTT = 'true';
+      console.log('✅ Enabled PTT auto-start');
+    }
+    if (!settings.env.MCP_VOICE_HOOKS_PTT_KEY) {
+      settings.env.MCP_VOICE_HOOKS_PTT_KEY = 'F8';
+      console.log('✅ Set default PTT key to F8');
+    }
+  }
+
   // Check if hooks actually changed (ignoring order)
-  if (areHooksEqual(settings.hooks || {}, updatedHooks)) {
+  const hooksChanged = !areHooksEqual(settings.hooks || {}, updatedHooks);
+  const envChanged = process.platform === 'win32' && settings.env &&
+    (settings.env.MCP_VOICE_HOOKS_PTT || settings.env.MCP_VOICE_HOOKS_PTT_KEY);
+
+  if (!hooksChanged && !envChanged) {
     console.log('✅ Claude settings already up to date');
     return;
   }
@@ -184,9 +207,48 @@ async function ensureHooksInstalled() {
   }
 }
 
+// Run the PTT helper
+async function runPTTHelper(helperArgs) {
+  const pttHelperPath = path.join(__dirname, 'ptt-helper.js');
+
+  const child = spawn('node', [pttHelperPath, ...helperArgs], {
+    stdio: 'inherit',
+    cwd: path.join(__dirname, '..')
+  });
+
+  child.on('error', (error) => {
+    console.error('❌ Failed to start PTT helper:', error.message);
+    process.exit(1);
+  });
+
+  child.on('exit', (code) => {
+    process.exit(code);
+  });
+
+  // Handle graceful shutdown
+  process.on('SIGINT', () => {
+    child.kill('SIGINT');
+  });
+
+  process.on('SIGTERM', () => {
+    child.kill('SIGTERM');
+  });
+}
+
+// Get CLI argument value
+function getArgValue(args, names) {
+  for (let i = 0; i < args.length; i++) {
+    if (names.includes(args[i]) && args[i + 1] && !args[i + 1].startsWith('-')) {
+      return args[i + 1];
+    }
+  }
+  return null;
+}
+
 // Run the MCP server
 async function runMCPServer() {
   const serverPath = path.join(__dirname, '..', 'dist', 'unified-server.js');
+  const pttHelperPath = path.join(__dirname, 'ptt-helper.js');
 
   // Build server arguments
   const serverArgs = ['--mcp-managed'];
@@ -199,6 +261,12 @@ async function runMCPServer() {
   if (args.includes('--legacy-ui')) {
     process.env.MCP_VOICE_HOOKS_LEGACY_UI = 'true';
   }
+
+  // Check if PTT helper should be started
+  const enablePTT = args.includes('--ptt') || process.env.MCP_VOICE_HOOKS_PTT === 'true';
+  const pttKey = getArgValue(args, ['--ptt-key']) || process.env.MCP_VOICE_HOOKS_PTT_KEY || 'Ctrl+Space';
+
+  let pttChild = null;
 
   // Run the compiled JavaScript server
   const child = spawn('node', [serverPath, ...serverArgs], {
@@ -213,17 +281,50 @@ async function runMCPServer() {
 
   child.on('exit', (code) => {
     console.log(`🔄 MCP server exited with code ${code}`);
+    if (pttChild) {
+      pttChild.kill();
+    }
     process.exit(code);
   });
+
+  // Start PTT helper if enabled (with delay to let server start first)
+  if (enablePTT && process.platform === 'win32') {
+    setTimeout(() => {
+      console.log(`🎤 Starting PTT helper with key: ${pttKey}`);
+      pttChild = spawn('node', [pttHelperPath, '--key', pttKey], {
+        stdio: 'inherit',
+        cwd: path.join(__dirname, '..')
+      });
+
+      pttChild.on('error', (error) => {
+        console.error('⚠️  PTT helper failed to start:', error.message);
+      });
+
+      pttChild.on('exit', (code) => {
+        if (code !== 0 && code !== null) {
+          console.log(`⚠️  PTT helper exited with code ${code}`);
+        }
+        pttChild = null;
+      });
+    }, 2000); // Wait 2 seconds for server to start
+  } else if (enablePTT && process.platform !== 'win32') {
+    console.log('⚠️  PTT helper is only supported on Windows');
+  }
 
   // Handle graceful shutdown
   process.on('SIGINT', () => {
     console.log('\n🛑 Shutting down...');
+    if (pttChild) {
+      pttChild.kill('SIGINT');
+    }
     child.kill('SIGINT');
   });
 
   process.on('SIGTERM', () => {
     console.log('\n🛑 Shutting down...');
+    if (pttChild) {
+      pttChild.kill('SIGTERM');
+    }
     child.kill('SIGTERM');
   });
 }

@@ -381,6 +381,89 @@
             color: #999;
         }
 
+        .ptt-delays-input {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .delay-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .delay-row label {
+            font-size: 12px;
+            color: #666;
+            min-width: 75px;
+        }
+
+        .delay-row input {
+            width: 60px;
+            padding: 3px 6px;
+            border: 1px solid #DDD;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .delay-unit {
+            font-size: 11px;
+            color: #999;
+        }
+
+        /* Wait Settings */
+        .wait-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+            padding: 10px;
+            background: #F5F5F5;
+            border-radius: 8px;
+        }
+
+        .wait-toggle {
+            display: flex;
+            align-items: center;
+        }
+
+        .wait-toggle .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .wait-timeout-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 24px;
+        }
+
+        .wait-timeout-row label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .wait-timeout-row input {
+            width: 70px;
+            padding: 4px 6px;
+            border: 1px solid #DDD;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .timeout-unit {
+            font-size: 11px;
+            color: #999;
+        }
+
         /* PTT Recording State */
         .mic-button.ptt-recording {
             background: #EF5350;
@@ -877,7 +960,7 @@
                         >
                     </div>
                     <div class="ptt-keybinding-input" id="pttKeybindingContainer" style="display: none;">
-                        <label for="pttKeybindingInput">Hold key:</label>
+                        <label for="pttKeybindingInput" id="pttKeybindingLabel">Hold key:</label>
                         <input
                             type="text"
                             id="pttKeybindingInput"
@@ -885,7 +968,25 @@
                             value="Ctrl+Space"
                             readonly
                         >
-                        <span class="ptt-hint">(or hold mic button)</span>
+                        <span class="ptt-hint" id="pttKeybindingHint">(or hold mic button)</span>
+                    </div>
+                    <div class="ptt-keybinding-input" id="pttToggleModeContainer" style="display: none;">
+                        <label for="pttToggleMode" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="pttToggleMode">
+                            Toggle mode (tap to start/stop)
+                        </label>
+                    </div>
+                    <div class="ptt-delays-input" id="pttDelaysContainer" style="display: none;">
+                        <div class="delay-row">
+                            <label for="pttStartDelay">Start delay:</label>
+                            <input type="number" id="pttStartDelay" value="100" min="0" max="1000" step="50">
+                            <span class="delay-unit">ms</span>
+                        </div>
+                        <div class="delay-row">
+                            <label for="pttStopDelay">Stop delay:</label>
+                            <input type="number" id="pttStopDelay" value="500" min="0" max="1000" step="50">
+                            <span class="delay-unit">ms</span>
+                        </div>
                     </div>
                 </div>
 
@@ -908,6 +1009,21 @@
                 <div id="pttStatus" class="ptt-status" style="display: none;">
                     <div class="ptt-status-icon"></div>
                     <span class="ptt-status-text">Hold to talk...</span>
+                </div>
+
+                <!-- Wait for Input Settings -->
+                <div class="wait-settings">
+                    <div class="wait-toggle">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="waitForInputToggle" checked>
+                            <span>Wait for input after response</span>
+                        </label>
+                    </div>
+                    <div class="wait-timeout-row" id="waitTimeoutContainer">
+                        <label for="waitTimeout">Timeout:</label>
+                        <input type="number" id="waitTimeout" value="60" min="30" max="600" step="30">
+                        <span class="timeout-unit">sec</span>
+                    </div>
                 </div>
 
                 <!-- Speech Recognition Language (always visible) -->
