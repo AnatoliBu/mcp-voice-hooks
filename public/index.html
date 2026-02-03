@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Voice Mode for Claude Code - Messenger</title>
     <style>
         * {
@@ -15,13 +15,19 @@
             padding: 0;
             background-color: #f5f5f5;
             height: 100vh;
+            height: 100dvh;
+            height: var(--app-height, 100dvh);
             overflow: hidden;
+            overscroll-behavior: none;
+            -webkit-text-size-adjust: 100%;
         }
 
         .app-container {
             display: flex;
             flex-direction: column;
             height: 100vh;
+            height: 100dvh;
+            height: var(--app-height, 100dvh);
             max-width: 1200px;
             margin: 0 auto;
             background: white;
@@ -32,7 +38,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
+            padding: max(20px, env(safe-area-inset-top)) 20px 20px 20px;
             background: #E0E0E0;
             color: #000;
             border-bottom: 6px solid #666;
@@ -133,6 +139,8 @@
             overflow-y: auto;
             background: #F5F5F5;
             position: relative;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
         }
 
         .conversation-messages {
@@ -172,6 +180,10 @@
             font-style: italic;
             padding: 12px 20px;
             margin-top: 8px;
+            position: sticky;
+            bottom: 0;
+            background: linear-gradient(transparent, #F5F5F5 30%);
+            z-index: 1;
         }
 
         /* Message Bubbles */
@@ -253,6 +265,8 @@
             cursor: pointer;
             opacity: 0.5;
             transition: opacity 0.2s;
+            padding: 15px;
+            margin: -15px;
         }
 
         .delete-message-btn:hover {
@@ -300,7 +314,7 @@
         .input-section {
             border-top: 1px solid #E0E0E0;
             background: white;
-            padding: 16px 20px;
+            padding: 16px 20px max(16px, env(safe-area-inset-bottom)) 20px;
         }
 
         /* Send Mode Controls */
@@ -308,7 +322,7 @@
             display: flex;
             align-items: center;
             gap: 16px;
-            margin-bottom: 12px;
+            margin-bottom: 0;
             padding: 8px;
             background: #F8F9FA;
             border-radius: 8px;
@@ -643,6 +657,10 @@
         .settings-content {
             display: none;
             padding: 12px 8px;
+            max-height: 50vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
         }
 
         .settings-content.open {
@@ -786,6 +804,17 @@
             background: #0051D5;
         }
 
+        /* Touch polishing */
+        button, label, .mic-button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mic-button, .icon-button {
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
             .app-container {
@@ -904,9 +933,63 @@
                 font-size: 13px;
             }
         }
+        /* Audio unlock overlay */
+        .audio-unlock-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .audio-unlock-overlay.hidden {
+            display: none;
+        }
+
+        .audio-unlock-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 32px 48px;
+            background: white;
+            border: 4px solid #333;
+            border-radius: 16px;
+            box-shadow: 6px 6px 0 #333;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            transition: transform 0.1s, box-shadow 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .audio-unlock-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0 #333;
+        }
+
+        .audio-unlock-btn svg {
+            width: 48px;
+            height: 48px;
+            fill: #0066FF;
+        }
     </style>
 </head>
 <body>
+    <!-- Audio unlock overlay (shown only when voice responses are enabled) -->
+    <div id="audioUnlockOverlay" class="audio-unlock-overlay hidden">
+        <button class="audio-unlock-btn" id="audioUnlockBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+            Tap to enable voice
+        </button>
+    </div>
+
     <div class="app-container">
         <!-- Header -->
         <div class="app-header">
@@ -936,60 +1019,6 @@
 
             <!-- Input Section -->
             <div class="input-section">
-                <!-- Send Mode Controls -->
-                <div class="send-mode-controls">
-                    <div class="send-mode-radio">
-                        <input type="radio" id="autoMode" name="sendMode" value="automatic" checked>
-                        <label for="autoMode">Auto-send on pause</label>
-                    </div>
-                    <div class="send-mode-radio">
-                        <input type="radio" id="triggerMode" name="sendMode" value="trigger">
-                        <label for="triggerMode">Wait for trigger word</label>
-                    </div>
-                    <div class="send-mode-radio">
-                        <input type="radio" id="pttMode" name="sendMode" value="ptt">
-                        <label for="pttMode">Push-to-talk</label>
-                    </div>
-                    <div class="trigger-word-input" id="triggerWordInputContainer" style="display: none;">
-                        <label for="triggerWordInput">Trigger:</label>
-                        <input
-                            type="text"
-                            id="triggerWordInput"
-                            placeholder="e.g., send, go"
-                            value="send"
-                        >
-                    </div>
-                    <div class="ptt-keybinding-input" id="pttKeybindingContainer" style="display: none;">
-                        <label for="pttKeybindingInput" id="pttKeybindingLabel">Hold key:</label>
-                        <input
-                            type="text"
-                            id="pttKeybindingInput"
-                            placeholder="Press a key..."
-                            value="Ctrl+Space"
-                            readonly
-                        >
-                        <span class="ptt-hint" id="pttKeybindingHint">(or hold mic button)</span>
-                    </div>
-                    <div class="ptt-keybinding-input" id="pttToggleModeContainer" style="display: none;">
-                        <label for="pttToggleMode" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                            <input type="checkbox" id="pttToggleMode">
-                            Toggle mode (tap to start/stop)
-                        </label>
-                    </div>
-                    <div class="ptt-delays-input" id="pttDelaysContainer" style="display: none;">
-                        <div class="delay-row">
-                            <label for="pttStartDelay">Start delay:</label>
-                            <input type="number" id="pttStartDelay" value="100" min="0" max="1000" step="50">
-                            <span class="delay-unit">ms</span>
-                        </div>
-                        <div class="delay-row">
-                            <label for="pttStopDelay">Stop delay:</label>
-                            <input type="number" id="pttStopDelay" value="500" min="0" max="1000" step="50">
-                            <span class="delay-unit">ms</span>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Text Input with Microphone -->
                 <div class="input-container">
                     <textarea
@@ -1011,45 +1040,100 @@
                     <span class="ptt-status-text">Hold to talk...</span>
                 </div>
 
-                <!-- Wait for Input Settings -->
-                <div class="wait-settings">
-                    <div class="wait-toggle">
-                        <label class="toggle-label">
-                            <input type="checkbox" id="waitForInputToggle" checked>
-                            <span>Wait for input after response</span>
-                        </label>
-                    </div>
-                    <div class="wait-timeout-row" id="waitTimeoutContainer">
-                        <label for="waitTimeout">Timeout:</label>
-                        <input type="number" id="waitTimeout" value="60" min="30" max="600" step="30">
-                        <span class="timeout-unit">sec</span>
-                    </div>
-                </div>
-
-                <!-- Speech Recognition Language (always visible) -->
-                <div class="tts-control" style="margin-top: 12px; margin-bottom: 8px;">
-                    <label for="sttLanguageSelect">Recognition Language:</label>
-                    <select id="sttLanguageSelect">
-                        <option value="en-US">English (en-US)</option>
-                        <option value="ru-RU">Русский (ru-RU)</option>
-                        <option value="de-DE">Deutsch (de-DE)</option>
-                        <option value="fr-FR">Français (fr-FR)</option>
-                        <option value="es-ES">Español (es-ES)</option>
-                        <option value="zh-CN">中文 (zh-CN)</option>
-                        <option value="ja-JP">日本語 (ja-JP)</option>
-                        <option value="ko-KR">한국어 (ko-KR)</option>
-                        <option value="pt-BR">Português (pt-BR)</option>
-                        <option value="it-IT">Italiano (it-IT)</option>
-                    </select>
-                </div>
-
                 <!-- Settings Toggle -->
                 <div class="settings-toggle">
                     <div class="toggle-header" id="settingsToggleHeader">
-                        <h3>Voice Settings</h3>
+                        <h3>Settings</h3>
                         <span class="toggle-arrow">▼</span>
                     </div>
                     <div class="settings-content" id="settingsContent">
+                        <!-- Send Mode Controls -->
+                        <div class="send-mode-controls">
+                            <div class="send-mode-radio">
+                                <input type="radio" id="autoMode" name="sendMode" value="automatic" checked>
+                                <label for="autoMode">Auto-send on pause</label>
+                            </div>
+                            <div class="send-mode-radio">
+                                <input type="radio" id="triggerMode" name="sendMode" value="trigger">
+                                <label for="triggerMode">Wait for trigger word</label>
+                            </div>
+                            <div class="send-mode-radio">
+                                <input type="radio" id="pttMode" name="sendMode" value="ptt">
+                                <label for="pttMode">Push-to-talk</label>
+                            </div>
+                            <div class="trigger-word-input" id="triggerWordInputContainer" style="display: none;">
+                                <label for="triggerWordInput">Trigger:</label>
+                                <input
+                                    type="text"
+                                    id="triggerWordInput"
+                                    placeholder="e.g., send, go"
+                                    value="send"
+                                >
+                            </div>
+                            <div class="ptt-keybinding-input" id="pttKeybindingContainer" style="display: none;">
+                                <label for="pttKeybindingInput" id="pttKeybindingLabel">Hold key:</label>
+                                <input
+                                    type="text"
+                                    id="pttKeybindingInput"
+                                    placeholder="Press a key..."
+                                    value="Ctrl+Space"
+                                    readonly
+                                >
+                                <span class="ptt-hint" id="pttKeybindingHint">(or hold mic button)</span>
+                            </div>
+                            <div class="ptt-keybinding-input" id="pttToggleModeContainer" style="display: none;">
+                                <label for="pttToggleMode" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="pttToggleMode">
+                                    Toggle mode (tap to start/stop)
+                                </label>
+                            </div>
+                            <div class="ptt-delays-input" id="pttDelaysContainer" style="display: none;">
+                                <div class="delay-row">
+                                    <label for="pttStartDelay">Start delay:</label>
+                                    <input type="number" id="pttStartDelay" value="100" min="0" max="1000" step="50">
+                                    <span class="delay-unit">ms</span>
+                                </div>
+                                <div class="delay-row">
+                                    <label for="pttStopDelay">Stop delay:</label>
+                                    <input type="number" id="pttStopDelay" value="500" min="0" max="1000" step="50">
+                                    <span class="delay-unit">ms</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Wait for Input Settings -->
+                        <div class="wait-settings">
+                            <div class="wait-toggle">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="waitForInputToggle" checked>
+                                    <span>Wait for input after response</span>
+                                </label>
+                            </div>
+                            <div class="wait-timeout-row" id="waitTimeoutContainer">
+                                <label for="waitTimeout">Timeout:</label>
+                                <input type="number" id="waitTimeout" value="60" min="30" max="600" step="30">
+                                <span class="timeout-unit">sec</span>
+                            </div>
+                        </div>
+
+                        <!-- Speech Recognition Language -->
+                        <div class="tts-control" style="margin-top: 12px; margin-bottom: 8px;">
+                            <label for="sttLanguageSelect">Recognition Language:</label>
+                            <select id="sttLanguageSelect">
+                                <option value="en-US">English (en-US)</option>
+                                <option value="ru-RU">Русский (ru-RU)</option>
+                                <option value="de-DE">Deutsch (de-DE)</option>
+                                <option value="fr-FR">Français (fr-FR)</option>
+                                <option value="es-ES">Español (es-ES)</option>
+                                <option value="zh-CN">中文 (zh-CN)</option>
+                                <option value="ja-JP">日本語 (ja-JP)</option>
+                                <option value="ko-KR">한국어 (ko-KR)</option>
+                                <option value="pt-BR">Português (pt-BR)</option>
+                                <option value="it-IT">Italiano (it-IT)</option>
+                            </select>
+                        </div>
+
+                        <!-- Voice Response Settings -->
                         <div class="voice-response-control">
                             <span class="voice-response-label">Voice Responses</span>
                             <label class="toggle-switch">

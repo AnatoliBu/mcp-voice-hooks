@@ -60,6 +60,10 @@ class MessengerClient {
         this.pttStartDelay = 100; // Delay before starting recognition (ms)
         this.pttStopDelay = 500; // Delay before stopping recognition (ms)
 
+        // Dedup state for speech recognition
+        this.lastSentText = '';
+        this.lastSentTime = 0;
+
         // PTT elements
         this.pttKeybindingContainer = document.getElementById('pttKeybindingContainer');
         this.pttKeybindingInput = document.getElementById('pttKeybindingInput');
@@ -80,7 +84,14 @@ class MessengerClient {
         this.waitForInput = true;
         this.waitTimeout = 60;
 
+        // Audio unlock overlay elements
+        this.audioUnlockOverlay = document.getElementById('audioUnlockOverlay');
+        this.audioUnlockBtn = document.getElementById('audioUnlockBtn');
+        this.audioUnlocked = false;
+
         // Initialize
+        this.setupViewportHeight();
+        this.setupAudioUnlock();
         this.initializeSpeechRecognition();
         this.initializeSpeechSynthesis();
         this.initializeTTSEvents();
@@ -101,6 +112,65 @@ class MessengerClient {
         if (this.debug) {
             console.log(...args);
         }
+    }
+
+    setupViewportHeight() {
+        const update = () => {
+            const h = window.visualViewport
+                ? window.visualViewport.height
+                : window.innerHeight;
+            document.documentElement.style.setProperty('--app-height', `${h}px`);
+            this.scrollToBottom();
+        };
+
+        update();
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', update);
+            window.visualViewport.addEventListener('scroll', update);
+        } else {
+            window.addEventListener('resize', update);
+        }
+
+        window.addEventListener('orientationchange', () => {
+            setTimeout(update, 100);
+        });
+    }
+
+    setupAudioUnlock() {
+        // Show overlay only if voice responses are enabled
+        const voiceEnabled = localStorage.getItem('voiceResponsesEnabled') === 'true';
+        if (!voiceEnabled || !this.audioUnlockOverlay || !this.audioUnlockBtn) {
+            this.audioUnlocked = true;
+            return;
+        }
+
+        this.audioUnlockOverlay.classList.remove('hidden');
+
+        this.audioUnlockBtn.addEventListener('click', () => {
+            // Unlock speechSynthesis with a silent utterance
+            if (window.speechSynthesis) {
+                const silentUtterance = new SpeechSynthesisUtterance('');
+                silentUtterance.volume = 0;
+                window.speechSynthesis.speak(silentUtterance);
+            }
+
+            // Unlock AudioContext
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const buffer = ctx.createBuffer(1, 1, 22050);
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(ctx.destination);
+                source.start(0);
+                ctx.resume();
+            } catch (e) {
+                this.debugLog('AudioContext unlock failed:', e);
+            }
+
+            this.audioUnlocked = true;
+            this.audioUnlockOverlay.classList.add('hidden');
+        });
     }
 
     initializeSpeechSynthesis() {
@@ -1290,6 +1360,23 @@ class MessengerClient {
     }
 
     async sendMessage(text) {
+        // Deduplicate: skip if same text sent within 3 seconds
+        const now = Date.now();
+        if (text === this.lastSentText && now - this.lastSentTime < 3000) {
+            this.debugLog('[Dedup] Skipping exact duplicate:', text);
+            return false;
+        }
+        // Also block any send within 500ms of the last one (mobile speech API double-fire)
+        if (now - this.lastSentTime < 500) {
+            this.debugLog('[Dedup] Skipping rapid-fire message:', text);
+            return false;
+        }
+
+        // Set dedup state BEFORE async fetch to prevent race condition
+        // (multiple sendMessage calls from same onresult event)
+        this.lastSentText = text;
+        this.lastSentTime = now;
+
         try {
             const response = await fetch(`${this.baseUrl}/api/potential-utterances`, {
                 method: 'POST',
@@ -1391,6 +1478,8 @@ class MessengerClient {
         this.recognition.interimResults = true;
         this.recognition.lang = this.sttLanguage;
 
+        this.lastProcessedResultIndex = -1;
+
         this.recognition.onresult = (event) => {
             let interimTranscript = '';
 
@@ -1398,13 +1487,22 @@ class MessengerClient {
                 const transcript = event.results[i][0].transcript;
 
                 if (event.results[i].isFinal) {
+                    // Skip if we already processed this result index
+                    if (i <= this.lastProcessedResultIndex) {
+                        this.debugLog('[Speech] Skipping already-processed result index:', i);
+                        continue;
+                    }
+                    this.lastProcessedResultIndex = i;
+
                     // User paused
                     this.isInterimText = false;
 
                     if (this.sendMode === 'automatic') {
-                        // Send immediately
-                        const finalText = this.messageInput.value.trim();
-                        this.sendMessage(finalText);
+                        // Send the final transcript directly (not messageInput.value)
+                        const finalText = transcript.trim();
+                        if (finalText) {
+                            this.sendMessage(finalText);
+                        }
                         this.messageInput.value = '';
                         this.accumulatedText = '';
                     } else {
@@ -1464,6 +1562,8 @@ class MessengerClient {
         };
 
         this.recognition.onend = () => {
+            // Reset result index tracker on recognition restart
+            this.lastProcessedResultIndex = -1;
             // Don't auto-restart if paused for TTS
             if (this.isListening && !this.isPausedForTTS) {
                 try {
