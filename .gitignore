@@ -1,13 +1,5 @@
 # TypeScript compiled output
 dist/
-dist-electron/
-release/
-
-# Generated icons (keep source SVG only)
-build/icons/icon.icns
-build/icons/icon.ico
-build/icons/icon.png
-build/icons/icon.iconset/
 
 # Node modules
 node_modules/
@@ -60,3 +52,20 @@ npm-pack-*
 # CLAUDE.local.md
 CLAUDE.local.md
 .claude/settings.json
+
+logs
+dev-debug.log
+# Dependency directories
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/ 

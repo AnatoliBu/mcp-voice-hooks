@@ -65,7 +65,7 @@ The trigger word is case-insensitive and will be automatically removed from your
 For hands-free operation with precise control, use Push-to-Talk mode:
 
 1. Select "Push-to-talk" mode in the browser interface
-2. Configure your preferred key (default: Space)
+2. Configure your preferred key (default: Ctrl+Space)
 3. Hold the key to record, release to send
 4. Or hold the microphone button to record
 
@@ -74,6 +74,52 @@ For hands-free operation with precise control, use Push-to-Talk mode:
 - Visual feedback showing recording state
 - Automatic discard of accidental short recordings (<300ms)
 - Support for external PTT triggers via API
+
+#### Global PTT Hotkey (Works even when browser is not focused)
+
+By default, PTT keyboard shortcuts only work when the browser tab is active. To use PTT with global hotkeys that work even when the browser is minimized or in the background, run the PTT helper in a separate terminal:
+
+```bash
+# Start the PTT helper with default key (Ctrl+Space)
+npx mcp-voice-hooks ptt-helper
+
+# Or specify a custom key combination
+npx mcp-voice-hooks ptt-helper --key "Alt+Space"
+npx mcp-voice-hooks ptt-helper --key "F8"
+npx mcp-voice-hooks ptt-helper --key "Ctrl+Shift+R"
+```
+
+The PTT helper runs as a standalone process that listens for global keyboard events and sends commands to the mcp-voice-hooks server. Make sure PTT mode is enabled in the browser interface before starting the helper.
+
+**Auto-start PTT Helper with MCP Server:**
+
+You can configure the PTT helper to start automatically with the MCP server by adding environment variables to your `.claude/settings.local.json`:
+
+```json
+{
+  "env": {
+    "MCP_VOICE_HOOKS_PTT": "true",
+    "MCP_VOICE_HOOKS_PTT_KEY": "F8"
+  }
+}
+```
+
+Or pass CLI arguments when running manually:
+```bash
+npx mcp-voice-hooks --ptt --ptt-key "F8"
+```
+
+**Platform Support:**
+- **Windows**: Full support via native keyboard hook binary
+- **Mac/Linux**: Not yet supported (browser-based PTT works when tab is focused)
+
+**First-time Setup (Windows):**
+The PTT helper requires a native binary. If not already compiled, you can build it:
+```bash
+cd resources
+gcc -O2 windows-key-listener.c -o bin/windows-key-listener.exe -luser32
+```
+Requires MinGW or similar GCC toolchain. Pre-built binaries may be available in releases.
 
 ## Browser Compatibility
 
@@ -205,16 +251,15 @@ Quick start:
 git clone https://github.com/johnmatthewtennant/mcp-voice-hooks.git
 cd mcp-voice-hooks
 npm install
-npm run build:icons    # Requires ImageMagick
-npm run electron:build # Build for current platform
+npm run build          # Cleans cache and builds MCP server
 ```
+
+**Important:** The `npm run build` command automatically cleans the cache before building. If you experience issues with stale code, you can also run `npm run clean` manually to remove the `dist` directory.
 
 ### Documentation
 
 - **Building**: [docs/BUILDING.md](docs/BUILDING.md) - Build instructions
-- **Code Signing**: [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md) - Code signing setup
 - **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md) - Development workflow
-- **Stories**: [docs/stories/](docs/stories/) - Implementation details
 
 ## License
 
