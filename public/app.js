@@ -46,7 +46,9 @@ class MessengerClient {
         this.selectedVoice = 'system';
         this.speechRate = 1.0;
         this.speechPitch = 1.0;
-        this.pauseMicDuringTTS = true; // Pause mic during speech to avoid echo
+        // Default: pause mic on desktop (echo risk), don't pause on mobile (recognition resume unreliable)
+        this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        this.pauseMicDuringTTS = !this.isMobile;
         this.isPausedForTTS = false; // Flag to prevent auto-restart during TTS pause
 
         // PTT state
@@ -324,13 +326,7 @@ class MessengerClient {
 
             // Resume recognition after system voice finishes
             if (wasListening && this.recognition) {
-                try {
-                    this.isPausedForTTS = false;
-                    this.recognition.start();
-                    this.debugLog('Resumed recognition after system TTS');
-                } catch (e) {
-                    console.error('Failed to resume recognition:', e);
-                }
+                await this.resumeRecognitionAfterTTS();
             }
         } else {
             // Use browser voice
@@ -364,34 +360,39 @@ class MessengerClient {
 
             utterance.onend = () => {
                 this.debugLog('Finished speaking');
-                // Resume recognition after browser TTS finishes
                 if (wasListening && this.recognition) {
-                    try {
-                        this.isPausedForTTS = false;
-                        this.recognition.start();
-                        this.debugLog('Resumed recognition after browser TTS');
-                    } catch (e) {
-                        console.error('Failed to resume recognition:', e);
-                    }
+                    this.resumeRecognitionAfterTTS();
                 }
             };
 
             utterance.onerror = (event) => {
                 console.error('Speech synthesis error:', event);
-                // Resume recognition even on error
                 if (wasListening && this.recognition) {
-                    try {
-                        this.isPausedForTTS = false;
-                        this.recognition.start();
-                    } catch (e) {
-                        console.error('Failed to resume recognition:', e);
-                    }
+                    this.resumeRecognitionAfterTTS();
                 }
             };
 
             // Speak the text
             window.speechSynthesis.speak(utterance);
         }
+    }
+
+    async resumeRecognitionAfterTTS() {
+        this.isPausedForTTS = false;
+        // Retry recognition.start() with delays — mobile Safari can fail silently
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                if (attempt > 0) {
+                    await new Promise(r => setTimeout(r, 200 * attempt));
+                }
+                this.recognition.start();
+                this.debugLog(`Resumed recognition after TTS (attempt ${attempt + 1})`);
+                return;
+            } catch (e) {
+                this.debugLog(`Recognition resume attempt ${attempt + 1} failed:`, e.message);
+            }
+        }
+        console.error('Failed to resume recognition after TTS after 3 attempts');
     }
 
     loadPreferences() {
@@ -436,12 +437,12 @@ class MessengerClient {
             if (this.speechRateInput) this.speechRateInput.value = this.speechRate.toFixed(1);
         }
 
-        // Load pause mic during TTS preference
+        // Load pause mic during TTS preference (default: off on mobile, on for desktop)
         const savedPauseMic = localStorage.getItem('pauseMicDuringTTS');
         if (savedPauseMic !== null) {
             this.pauseMicDuringTTS = savedPauseMic === 'true';
-            if (this.pauseMicCheckbox) this.pauseMicCheckbox.checked = this.pauseMicDuringTTS;
         }
+        if (this.pauseMicCheckbox) this.pauseMicCheckbox.checked = this.pauseMicDuringTTS;
 
         // Load send mode preference
         const savedSendMode = localStorage.getItem('sendMode');
@@ -613,9 +614,21 @@ class MessengerClient {
             this.cloudVoicesGroup.style.display = '';
         }
 
-        // Restore selection or find default
-        if (this.selectedVoice) {
+        // Restore selection or pick a sensible default
+        if (this.selectedVoice && this.selectedVoice !== 'system') {
             this.voiceSelect.value = this.selectedVoice;
+        }
+
+        // If no saved voice or saved voice was 'system' without explicit user choice,
+        // default to first available browser voice (works cross-platform incl. mobile)
+        if (!localStorage.getItem('selectedVoice')) {
+            const firstBrowserOption =
+                this.cloudVoicesGroup.querySelector('option') ||
+                this.localVoicesGroup.querySelector('option');
+            if (firstBrowserOption) {
+                this.voiceSelect.value = firstBrowserOption.value;
+                this.selectedVoice = firstBrowserOption.value;
+            }
         }
 
         this.updateVoiceWarnings();
