@@ -725,14 +725,24 @@ class MessengerClient {
         });
 
         // Settings toggle
-        this.settingsToggleHeader.addEventListener('click', () => {
+        const toggleSettings = () => {
             const arrow = this.settingsToggleHeader.querySelector('.toggle-arrow');
-            if (this.settingsContent.classList.contains('open')) {
+            const isOpen = this.settingsContent.classList.contains('open');
+            if (isOpen) {
                 this.settingsContent.classList.remove('open');
                 arrow.classList.remove('open');
+                this.settingsToggleHeader.setAttribute('aria-expanded', 'false');
             } else {
                 this.settingsContent.classList.add('open');
                 arrow.classList.add('open');
+                this.settingsToggleHeader.setAttribute('aria-expanded', 'true');
+            }
+        };
+        this.settingsToggleHeader.addEventListener('click', toggleSettings);
+        this.settingsToggleHeader.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleSettings();
             }
         });
 
@@ -1066,6 +1076,7 @@ class MessengerClient {
         this.isPTTActive = true;
         this.pttStartTime = Date.now();
         this.micBtn.classList.add('ptt-recording');
+        this.micBtn.setAttribute('aria-pressed', 'true');
 
         // Ensure pttKeyParts is populated (in case loaded from localStorage)
         if (this.pttKeyParts.length === 0) {
@@ -1150,6 +1161,7 @@ class MessengerClient {
         if (effectiveDuration < this.pttMinDuration) {
             this.debugLog(`[PTT] Recording too short (${effectiveDuration}ms), discarding`);
             this.micBtn.classList.remove('ptt-recording');
+            this.micBtn.setAttribute('aria-pressed', 'false');
             if (this.pttStatus) {
                 this.pttStatus.classList.remove('recording');
                 if (this.pttStatusText) {
@@ -1170,6 +1182,7 @@ class MessengerClient {
         // Delay before stopping to capture final words
         setTimeout(async () => {
             this.micBtn.classList.remove('ptt-recording');
+            this.micBtn.setAttribute('aria-pressed', 'false');
 
             // Hide PTT status recording state
             if (this.pttStatus) {
@@ -1302,6 +1315,21 @@ class MessengerClient {
         timestamp.className = 'message-timestamp';
         timestamp.textContent = this.formatTimestamp(message.timestamp);
         messageMeta.appendChild(timestamp);
+
+        // Read Aloud button
+        const readAloudBtn = document.createElement('button');
+        readAloudBtn.className = 'read-aloud-btn';
+        readAloudBtn.setAttribute('aria-label', 'Read aloud');
+        readAloudBtn.innerHTML = `
+            <svg class="read-aloud-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+            </svg>
+        `;
+        readAloudBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.speakText(message.text);
+        };
+        messageMeta.appendChild(readAloudBtn);
 
         // Only show status for user messages
         if (message.role === 'user' && message.status) {
@@ -1436,6 +1464,7 @@ class MessengerClient {
             this.recognition.start();
             this.isListening = true;
             this.micBtn.classList.add('listening');
+            this.micBtn.setAttribute('aria-pressed', 'true');
 
             // Activate voice input when mic is on
             await this.updateVoiceInputState(true);
@@ -1450,6 +1479,7 @@ class MessengerClient {
             this.isListening = false;
             this.recognition.stop();
             this.micBtn.classList.remove('listening');
+            this.micBtn.setAttribute('aria-pressed', 'false');
 
             // Send any accumulated text in the input
             const text = this.messageInput.value.trim();

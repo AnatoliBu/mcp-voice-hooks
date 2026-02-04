@@ -116,6 +116,23 @@ async function sendPTTAction(action) {
   }
 }
 
+// Check if another PTT helper instance is already running
+async function isAlreadyRunning() {
+  try {
+    const { execSync } = await import('child_process');
+    const output = execSync('tasklist /FI "IMAGENAME eq windows-key-listener.exe" /NH /FO CSV', {
+      encoding: 'utf8',
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    // tasklist returns lines with process info; filter out "INFO: No tasks" messages
+    const lines = output.split(/\r?\n/).filter(l => l.includes('windows-key-listener.exe'));
+    return lines.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 // Main
 const binaryPath = findKeyListenerBinary();
 
@@ -129,6 +146,12 @@ The binary needs to be compiled first. Run:
 Or download a pre-built binary from the releases page.
 `);
   process.exit(1);
+}
+
+// Check for already running instance
+if (await isAlreadyRunning()) {
+  console.log('ℹ️  PTT Helper is already running. Skipping duplicate launch.');
+  process.exit(0);
 }
 
 console.log(`

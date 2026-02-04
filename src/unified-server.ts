@@ -153,7 +153,9 @@ let lastSpeakTimestamp: Date | null = null;
 // Voice preferences (controlled by browser)
 let voicePreferences = {
   voiceResponsesEnabled: false,
-  voiceInputActive: false
+  voiceInputActive: false,
+  waitForInput: true, // Whether to wait for user input before stopping
+  waitTimeout: 60 // seconds (30-600)
 };
 
 // HTTP Server Setup (always created)
@@ -256,15 +258,7 @@ app.post('/api/dequeue-utterances', (_req: Request, res: Response) => {
 
 // Shared wait for utterance logic
 async function waitForUtteranceCore() {
-  // Check if voice input is active
-  if (!voicePreferences.voiceInputActive) {
-    return {
-      success: false,
-      error: 'Voice input is not active. Cannot wait for utterances when voice input is disabled.'
-    };
-  }
-
-  const secondsToWait = WAIT_TIMEOUT_SECONDS;
+  const secondsToWait = voicePreferences.waitTimeout;
   const maxWaitMs = secondsToWait * 1000;
   const startTime = Date.now();
 
@@ -277,14 +271,14 @@ async function waitForUtteranceCore() {
 
   // Poll for utterances
   while (Date.now() - startTime < maxWaitMs) {
-    // Check if voice input is still active
-    if (!voicePreferences.voiceInputActive) {
-      debugLog('[WaitCore] Voice input deactivated during wait_for_utterance');
+    // Check if waitForInput was disabled during wait
+    if (!voicePreferences.waitForInput) {
+      debugLog('[WaitCore] Wait for input disabled during wait_for_utterance');
       notifyWaitStatus(false); // Notify wait has ended
       return {
         success: true,
         utterances: [],
-        message: 'Voice input was deactivated',
+        message: 'Wait for input was disabled',
         waitTime: Date.now() - startTime,
       };
     }
@@ -342,13 +336,6 @@ async function waitForUtteranceCore() {
 // Wait for utterance endpoint
 app.post('/api/wait-for-utterances', async (_req: Request, res: Response) => {
   const result = await waitForUtteranceCore();
-
-  // If error response, return 400 status
-  if (!result.success && result.error) {
-    res.status(400).json(result);
-    return;
-  }
-
   res.json(result);
 });
 
@@ -479,21 +466,13 @@ function handleHookRequest(attemptedAction: 'tool' | 'speak' | 'stop' | 'post-to
       };
     }
 
-    // Auto-wait for utterances (only if voice input is active)
-    if (voiceInputActive) {
+    // Auto-wait for utterances (if waitForInput is enabled)
+    if (voicePreferences.waitForInput) {
       return (async () => {
         try {
           debugLog(`[Stop Hook] Auto-calling wait_for_utterance...`);
           const data = await waitForUtteranceCore();
           debugLog(`[Stop Hook] wait_for_utterance response: ${JSON.stringify(data)}`);
-
-          // If error (voice input not active), treat as no utterances found
-          if (!data.success && data.error) {
-            return {
-              decision: 'approve' as const,
-              reason: data.error
-            };
-          }
 
           // If utterances were found, block and return them
           if (data.utterances && data.utterances.length > 0) {
@@ -654,7 +633,7 @@ app.post('/api/voice-preferences', (req: Request, res: Response) => {
   });
 });
 
-// API for voice input state (GET - for Electron to check current state)
+// API for voice input state
 app.get('/api/voice-input-state', (_req: Request, res: Response) => {
   res.json({
     voiceInputActive: voicePreferences.voiceInputActive,
@@ -674,6 +653,36 @@ app.post('/api/voice-input-state', (req: Request, res: Response) => {
   res.json({
     success: true,
     voiceInputActive: voicePreferences.voiceInputActive
+  });
+});
+
+// API for wait settings (GET)
+app.get('/api/wait-settings', (_req: Request, res: Response) => {
+  res.json({
+    waitForInput: voicePreferences.waitForInput,
+    waitTimeout: voicePreferences.waitTimeout
+  });
+});
+
+// API for wait settings (POST)
+app.post('/api/wait-settings', (req: Request, res: Response) => {
+  const { waitForInput, waitTimeout } = req.body;
+
+  if (typeof waitForInput === 'boolean') {
+    voicePreferences.waitForInput = waitForInput;
+    debugLog(`[Wait Settings] waitForInput set to ${waitForInput}`);
+  }
+
+  if (typeof waitTimeout === 'number') {
+    // Clamp to 30-600 seconds (30s to 10min)
+    voicePreferences.waitTimeout = Math.max(30, Math.min(600, waitTimeout));
+    debugLog(`[Wait Settings] waitTimeout set to ${voicePreferences.waitTimeout}s`);
+  }
+
+  res.json({
+    success: true,
+    waitForInput: voicePreferences.waitForInput,
+    waitTimeout: voicePreferences.waitTimeout
   });
 });
 

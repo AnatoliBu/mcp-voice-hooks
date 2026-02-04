@@ -7,48 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Story 1.10: Build & Distribution
-
-- **electron-builder configuration** for multi-platform builds (macOS, Windows, Linux)
-- **Application icons** with automated SVG-to-icon conversion
-  - macOS: `.icns` format with retina support
-  - Windows: `.ico` format with multiple resolutions
-  - Linux: `.png` format (512x512)
-  - Icon generation script: `npm run build:icons`
-- **GitHub Actions CI/CD workflow** for automated builds
-  - Matrix builds on all 3 platforms
-  - Automated release creation with artifacts
-  - Code signing support (optional)
-- **Platform-specific installers**
-  - macOS: DMG + ZIP (universal, x64, arm64)
-  - Windows: NSIS installer + Portable executable (x64, arm64)
-  - Linux: AppImage + DEB packages (x64, arm64)
-- **Code signing infrastructure**
-  - macOS: Developer ID + notarization support
-  - Windows: Certificate-based signing
-  - Environment variable configuration
-  - Comprehensive documentation
-- **Build scripts** for all platforms
-  - `npm run electron:build` - Current platform
-  - `npm run electron:build:mac` - macOS
-  - `npm run electron:build:win` - Windows
-  - `npm run electron:build:linux` - Linux
-- **Documentation**
-  - `docs/BUILDING.md` - Build instructions
-  - `docs/CODE_SIGNING.md` - Code signing guide
-  - `docs/stories/1.10.build-distribution.md` - Implementation details
-  - `build/icons/ICONS-README.md` - Icon generation guide
-  - `build/README.md` - Build resources overview
-
-### Changed
-
-- Updated `.gitignore` to exclude generated icons and build artifacts
-- Enhanced `package.json` with electron-builder configuration
-- Added vite and electron-builder dependencies
-
-### Fixed
-
-- N/A (new feature)
+_No changes yet._
 
 ## [1.0.40] - Previous Release
 

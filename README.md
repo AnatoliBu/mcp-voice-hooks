@@ -126,6 +126,7 @@ Requires MinGW or similar GCC toolchain. Pre-built binaries may be available in 
 - ✅ **Chrome**: Full support for speech recognition, browser text-to-speech, and system text-to-speech
 - ⚠️ **Safari**: Full support for speech recognition and system text-to-speech, but browser text-to-speech cannot load high-quality voices
 - ❌ **Edge**: Speech recognition not working on Apple Silicon (language-not-supported error)
+- ⚠️ **Safari Private Browsing**: localStorage is cleared when the tab is closed, which resets all voice-hooks settings. Use a regular (non-private) Safari window instead.
 
 ## Voice responses
 

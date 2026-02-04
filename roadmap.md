@@ -45,6 +45,14 @@ Create an MCP server that enables real-time voice interaction with Claude Code a
   - [x] Minimum recording duration filter (300ms)
   - [x] Touch support for mobile
 - [ ] Add ability to delete pending messages in messenger UI
+- [ ] Add MCP tool to view conversation history (not just pending messages)
+- [x] Add global PTT hotkey support via native Windows keyboard hook
+  - [x] Created `bin/ptt-helper.js` Node.js script
+  - [x] Compiled `windows-key-listener.exe` native binary
+  - [x] Added `npx mcp-voice-hooks ptt-helper` command
+  - [x] Auto-start PTT helper with MCP server via env vars
+  - [x] Added PTT delay settings (start/stop) to UI
+  - [x] Settings persist in localStorage
 - [x] Add UI switch buttons in both interfaces
   - [x] Add button in messenger UI top right to switch to legacy UI
   - [x] Add button in legacy UI top right to switch to messenger UI

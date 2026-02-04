@@ -326,6 +326,8 @@ class VoiceHooksClient {
             this.recognition.start();
             this.isListening = true;
             this.listenBtn.classList.add('listening');
+            this.listenBtn.setAttribute('aria-pressed', 'true');
+            this.listenBtn.setAttribute('aria-label', 'Stop Listening');
             this.listenBtnText.textContent = 'Stop Listening';
             this.listeningIndicator.classList.add('active');
             this.debugLog('Started listening');
@@ -343,6 +345,8 @@ class VoiceHooksClient {
             this.isListening = false;
             this.recognition.stop();
             this.listenBtn.classList.remove('listening');
+            this.listenBtn.setAttribute('aria-pressed', 'false');
+            this.listenBtn.setAttribute('aria-label', 'Start Listening');
             this.listenBtnText.textContent = 'Start Listening';
             this.listeningIndicator.classList.remove('active');
             this.interimText.textContent = 'Start speaking and your words will appear here...';
@@ -665,6 +669,21 @@ class VoiceHooksClient {
             this.isPausedForTTS = true; // Prevent auto-restart in onend
             this.recognition.stop();
             this.debugLog('Paused recognition during TTS');
+            // Wait for recognition to actually stop before starting TTS
+            await new Promise(resolve => {
+                const originalOnEnd = this.recognition.onend;
+                let resolved = false;
+                const done = () => {
+                    if (resolved) return;
+                    resolved = true;
+                    this.recognition.onend = originalOnEnd;
+                    resolve();
+                };
+                this.recognition.onend = done;
+                // Fallback timeout in case onend doesn't fire
+                setTimeout(done, 500);
+            });
+            this.debugLog('Recognition fully stopped, starting TTS');
         }
 
         // Check if we should use system voice

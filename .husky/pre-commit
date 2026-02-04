@@ -2,10 +2,6 @@
 
 echo "=== PRE-COMMIT HOOK IS RUNNING ==="
 
-# Automatically stage all changes
-echo "Auto-staging all changes..."
-git add .
-
 # # Check if the roadmap.md file has changes
 # if git diff --cached --quiet roadmap.md; then
 #   # Exit code 0 from diff --quiet means NO changes were staged for roadmap.md
