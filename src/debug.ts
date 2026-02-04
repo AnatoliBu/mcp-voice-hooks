@@ -7,5 +7,5 @@ export function debugLog(...args: any[]): void {
 }
 
 export function unusedExportForTesting(): string {
-    return 'this should be caught by knip or ts-prune';
+    return 'this should be caught by knip or ts-prune v2';
 }
