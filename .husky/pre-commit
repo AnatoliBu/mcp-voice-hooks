@@ -1,2 +1,2 @@
 #!/bin/sh
-echo "HOOK RUNNING" && echo "WILL FAIL" && exit 1
+node .husky/pre-commit.cjs
