@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo "=== PRE-COMMIT HOOK IS RUNNING ==="
+
 # Automatically stage all changes
 echo "Auto-staging all changes..."
 git add .
