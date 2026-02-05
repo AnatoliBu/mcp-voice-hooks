@@ -15,9 +15,6 @@ console.log('=== PRE-COMMIT HOOK IS RUNNING ===');
 // Run knip to check for unused dependencies, files, and exports
 run('node node_modules/knip/dist/cli.js --no-config-hints', 'Knip: unused dependencies/files/exports');
 
-// Run ts-prune to double-check for unused exports
-run('node node_modules/ts-prune/lib/index.js --error', 'ts-prune: unused TypeScript exports');
-
 // Run the build to ensure it compiles successfully
 run('npm run build', 'TypeScript build');
 

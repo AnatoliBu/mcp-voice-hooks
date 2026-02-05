@@ -1,16 +1,6 @@
 {
-  "entry": [
-    "src/unified-server.ts"
-  ],
-  "project": [
-    "src/**/*.ts"
-  ],
-  "ignore": [
-    "src/__tests__/**",
-    "public/**"
-  ],
-  "ignoreBinaries": [
-    "knip",
-    "ts-prune"
-  ]
+    "entry": ["src/unified-server.ts"],
+    "project": ["src/**/*.ts"],
+    "ignore": ["src/__tests__/**", "public/**"],
+    "ignoreBinaries": ["knip"]
 }

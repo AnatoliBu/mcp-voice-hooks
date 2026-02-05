@@ -1,2 +1,9 @@
 #!/bin/sh
-node .husky/pre-commit.cjs
+# This file is kept for documentation purposes.
+# On Windows (MSYS/Git Bash), the actual hook is .husky/_/pre-commit
+# which is a Node.js script created by scripts/setup-hooks.cjs
+#
+# On Unix systems, this file would be executed directly by husky.
+# For cross-platform compatibility, we use Node.js for the actual logic.
+
+exec node .husky/pre-commit.cjs
