@@ -32,7 +32,7 @@ ehthumbs.db
 Thumbs.db
 
 # IDE
-.vscode/settings.json
+.vscode/
 .idea/
 
 # Environment variables
@@ -70,3 +70,27 @@ dev-debug.log
 # tasks.json
 # tasks/ 
 .aider*
+
+# AI agent framework metadata
+.agent/
+.bmad-core/
+.bmad/
+_bmad/
+.codex/
+.gemini/
+.opencode/
+.qwen/
+.roo/
+.crush/
+.iflow/
+.clinerules/
+.taskmaster/
+.kilocodemodes
+
+# Reference/research files
+references/
+
+# Misc
+mock.py
+test-output.txt
+.env.example
