@@ -8,6 +8,8 @@ Guide for integrating mcp-voice-hooks with [OpenCode](https://opencode.ai).
 
 Add the `mcp` section to your project's `opencode.jsonc`:
 
+**From npm:**
+
 ```jsonc
 {
   // ... your existing config ...
@@ -15,6 +17,25 @@ Add the `mcp` section to your project's `opencode.jsonc`:
     "voice-hooks": {
       "type": "local",
       "command": ["npx", "mcp-voice-hooks@latest"],
+      "enabled": true,
+      "environment": {
+        "MCP_VOICE_HOOKS_PORT": "5111",
+        "MCP_VOICE_HOOKS_AUTO_OPEN_BROWSER": "false"
+      }
+    }
+  }
+}
+```
+
+**From source:**
+
+```jsonc
+{
+  // ... your existing config ...
+  "mcp": {
+    "voice-hooks": {
+      "type": "local",
+      "command": ["node", "/absolute/path/to/mcp-voice-hooks/bin/cli.js"],
       "enabled": true,
       "environment": {
         "MCP_VOICE_HOOKS_PORT": "5111",

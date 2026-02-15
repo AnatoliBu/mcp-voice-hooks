@@ -24,10 +24,24 @@ npm install -g @anthropic-ai/claude-code
 
 ### 2. Install Voice Mode
 
+**From npm:**
+
 ```bash
 npx mcp-voice-hooks@latest install-hooks
 claude mcp add voice-hooks npx mcp-voice-hooks@latest
 ```
+
+**From source:**
+
+```bash
+git clone https://github.com/johnmatthewtennant/mcp-voice-hooks.git
+cd mcp-voice-hooks
+npm install && npm run build
+node bin/cli.js install-hooks
+claude mcp add voice-hooks -- node /absolute/path/to/mcp-voice-hooks/bin/cli.js
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local development workflow.
 
 ## Usage
 
