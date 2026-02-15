@@ -16,7 +16,7 @@ Voice recognition and text-to-speech are handled by the browser, so there is not
 
 ## Installation
 
-Installation is easy.
+Installation is easy. Instructions below are for Claude Code. For **OpenCode**, see [docs/opencode-setup.md](docs/opencode-setup.md).
 
 ### 1. Install Claude Code
 
