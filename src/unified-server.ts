@@ -811,10 +811,12 @@ app.get('/messenger', (_req: Request, res: Response) => {
 });
 
 // Start HTTP server
-app.listen(HTTP_PORT, async () => {
+const httpServer = app.listen(HTTP_PORT);
+
+httpServer.on('listening', async () => {
   if (!IS_MCP_MANAGED) {
     console.log(`[HTTP] Server listening on http://localhost:${HTTP_PORT}`);
-    console.log(`[Mode] Running in ${IS_MCP_MANAGED ? 'MCP-managed' : 'standalone'} mode`);
+    console.log(`[Mode] Running in standalone mode`);
   } else {
     // In MCP mode, write to stderr to avoid interfering with protocol
     console.error(`[HTTP] Server listening on http://localhost:${HTTP_PORT}`);
@@ -838,6 +840,17 @@ app.listen(HTTP_PORT, async () => {
         debugLog(`[Browser] Frontend already connected (${ttsClients.size} client(s))`)
       }
     }, 3000);
+  }
+});
+
+httpServer.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    const log = IS_MCP_MANAGED ? console.error : console.log;
+    log(`[voice-hooks] Port ${HTTP_PORT} already in use — another instance is running.`);
+    log(`[voice-hooks] MCP tools will work through the existing server.`);
+    // Don't exit — MCP server (stdio) continues working for this client
+  } else {
+    throw err;
   }
 });
 
