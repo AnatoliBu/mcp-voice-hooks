@@ -17,7 +17,8 @@ Add the `mcp` section to your project's `opencode.jsonc`:
       "command": ["npx", "mcp-voice-hooks@latest"],
       "enabled": true,
       "environment": {
-        "MCP_VOICE_HOOKS_PORT": "5111"
+        "MCP_VOICE_HOOKS_PORT": "5111",
+        "MCP_VOICE_HOOKS_AUTO_OPEN_BROWSER": "false"
       }
     }
   }
@@ -50,10 +51,6 @@ async function postHook(path) {
   }
 }
 
-function isVoiceHooksTool(toolName) {
-  return toolName.includes('voice-hooks') || toolName === 'speak';
-}
-
 function isSpeakTool(toolName) {
   return toolName.includes('speak');
 }
@@ -73,9 +70,6 @@ export const VoiceHooksPlugin = async ({ client }) => {
     },
 
     'tool.execute.after': async (input, _output) => {
-      if (!isVoiceHooksTool(input.tool)) {
-        await postHook('/api/hooks/post-tool');
-      }
       if (input.sessionID) lastSessionID = input.sessionID;
     },
 
@@ -107,13 +101,14 @@ The browser interface will open automatically at http://localhost:5111. Click "S
 
 ## How It Works
 
-The plugin implements three hooks that mirror Claude Code's hook system:
+The plugin implements two hooks that mirror Claude Code's hook system:
 
 | OpenCode Hook | Claude Code Equivalent | Behavior |
 |---|---|---|
 | `tool.execute.before` | PreToolUse (pre-speak) | Blocks `speak` tool if pending utterances exist |
-| `tool.execute.after` | PostToolUse (post-tool) | Tracks tool use timestamps on the server |
 | `event` (session.idle) | Stop hook | Re-prompts session if voice input is waiting |
+
+**Note:** The post-tool hook (tool use timestamp tracking) is intentionally omitted. In Claude Code, it enforces "must speak after tools" via a blocking stop hook. OpenCode's `session.idle` cannot block, so tracking tool timestamps would cause an infinite re-prompt loop.
 
 ### Key Difference from Claude Code
 
@@ -125,6 +120,10 @@ OpenCode cannot block session stop the way Claude Code's Stop hook does. Instead
 2. Delete `.opencode/plugins/voice-hooks.js`
 
 ## Configuration
+
+### Browser Auto-Open
+
+Auto-open is disabled by default in the config above (`MCP_VOICE_HOOKS_AUTO_OPEN_BROWSER: "false"`). To open the browser manually, navigate to http://localhost:5111. Set to `"true"` to restore auto-open behavior.
 
 ### Custom Port
 
