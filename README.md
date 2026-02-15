@@ -112,6 +112,8 @@ Other downloaded voices appear directly in the voice dropdown.
 
 ## Configuration
 
+All configuration is done via environment variables in your project's `.claude/settings.local.json`.
+
 ### Port
 
 Default port is 5111. To change:
